@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS platform_system_setting (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    setting_key VARCHAR(128) NOT NULL UNIQUE,
+    setting_value VARCHAR(500) NOT NULL,
+    description VARCHAR(255)
+);

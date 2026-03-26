@@ -1,0 +1,7 @@
+ALTER TABLE student_profile
+    ADD COLUMN IF NOT EXISTS advisor_scope VARCHAR(64);
+
+ALTER TABLE student_portrait
+    ADD COLUMN IF NOT EXISTS updated_by VARCHAR(64),
+    ADD COLUMN IF NOT EXISTS data_source VARCHAR(64),
+    ADD COLUMN IF NOT EXISTS public_visible BOOLEAN NOT NULL DEFAULT FALSE;

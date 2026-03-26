@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: student-service-platform-backend
+  profiles:
+    active: mock
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
+server:
+  port: 8080
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+platform:
+  security:
+    jwt-secret: change-me-in-production
+    jwt-expire-seconds: 7200
+    max-failed-login-attempts: 5
+    lock-duration-minutes: 30
+    default-password: 123456
+    require-password-reset-on-create: true
+  storage:
+    upload-dir: ./data/uploads
+    export-dir: ./data/exports
+  upload:
+    max-file-size-bytes: 20971520
+    allowed-content-types: application/pdf,image/png,image/jpeg,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel
+    allow-empty-content-type: false
