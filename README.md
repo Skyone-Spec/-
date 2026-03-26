@@ -1,7 +1,7 @@
 # 学院学生综合服务与党团管理平台后端
 
 团队分工与当前仓库边界见 [TEAM_SCOPE.md](/home/skyone/spec/student-service-platform-backend/TEAM_SCOPE.md)。
-`f42d` 中 2026-03-23 新增需求文档已复核，当前后端方向仍以“多级权限、知识库、审批留痕、学生状态管理、保守型学业分析”为主。
+[需求整合](/home/skyone/spec/student-service-platform-backend/需求整合) 中 2026-03-23 新增需求文档已复核，当前后端方向仍以“多级权限、知识库、审批留痕、学生状态管理、保守型学业分析”为主。
 
 ## 项目定位
 
