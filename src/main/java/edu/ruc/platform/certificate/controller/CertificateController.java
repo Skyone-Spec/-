@@ -1,6 +1,7 @@
 package edu.ruc.platform.certificate.controller;
 
 import edu.ruc.platform.auth.service.CurrentUserService;
+import edu.ruc.platform.auth.dto.AuthenticatedUser;
 import edu.ruc.platform.certificate.dto.ApprovalHistoryResponse;
 import edu.ruc.platform.certificate.dto.CertificatePreviewResponse;
 import edu.ruc.platform.certificate.dto.CertificateRequestActionRequest;
@@ -8,7 +9,7 @@ import edu.ruc.platform.certificate.dto.CertificateRequestCreateRequest;
 import edu.ruc.platform.certificate.dto.CertificateRequestResponse;
 import edu.ruc.platform.certificate.service.CertificateApplicationService;
 import edu.ruc.platform.common.api.ApiResponse;
-import edu.ruc.platform.common.enums.RoleType;
+import edu.ruc.platform.common.exception.BusinessException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -33,13 +34,13 @@ public class CertificateController {
 
     @PostMapping("/requests")
     public ApiResponse<CertificateRequestResponse> create(@Valid @RequestBody CertificateRequestCreateRequest request) {
-        currentUserService.requireSelfOrAdmin(request.studentId(), RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
+        requireCertificateOwner(request.studentId());
         return ApiResponse.success("申请已提交", certificateService.create(request));
     }
 
     @GetMapping("/requests/student/{studentId}")
     public ApiResponse<List<CertificateRequestResponse>> listByStudentId(@Positive(message = "学生ID必须大于 0") @PathVariable Long studentId) {
-        currentUserService.requireSelfOrAdmin(studentId, RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
+        requireCertificateOwner(studentId);
         return ApiResponse.success(certificateService.listByStudentId(studentId));
     }
 
@@ -57,5 +58,12 @@ public class CertificateController {
     public ApiResponse<CertificateRequestResponse> action(@Positive(message = "申请ID必须大于 0") @PathVariable Long requestId,
                                                           @Valid @RequestBody CertificateRequestActionRequest request) {
         return ApiResponse.success("申请状态已更新", certificateService.handleStudentAction(requestId, request));
+    }
+
+    private void requireCertificateOwner(Long studentId) {
+        AuthenticatedUser user = currentUserService.requireCurrentUser();
+        if (!user.userId().equals(studentId)) {
+            throw new BusinessException("证明申请仅支持学生本人操作");
+        }
     }
 }

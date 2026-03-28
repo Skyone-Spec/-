@@ -2,7 +2,19 @@
 
 本文档对应项目：[student-service-platform-backend](/home/skyone/spec/student-service-platform-backend)
 
-当前版本为 `mock` 联调版，默认不依赖真实数据库。
+当前版本默认仍为 `mock` 联调版，但已经补充 `kingbase` 数据库接入模式。
+
+可选运行模式：
+
+- `mock`：默认模式，不依赖真实数据库，适合前后端并行联调
+- `kingbase`：连接最新 `campus` 统一数据库模型，配合桥接脚本使用
+
+数据库模式接入文件：
+
+- [db/kingbase_schema.sql](/home/skyone/spec/student-service-platform-backend/db/kingbase_schema.sql)
+- [db/campus_sample_data.sql](/home/skyone/spec/student-service-platform-backend/db/campus_sample_data.sql)
+- [db/kingbase_backend_bridge.sql](/home/skyone/spec/student-service-platform-backend/db/kingbase_backend_bridge.sql)
+- [scripts/init-kingbase-bridge.sh](/home/skyone/spec/student-service-platform-backend/scripts/init-kingbase-bridge.sh)
 
 当前文档已同步 13:10 会议后的核心调整：
 
@@ -99,6 +111,7 @@
 - 管理端剩余列表接口也已补齐同类口径：导入任务、操作日志、知识库、导入错误、班主任负责范围、通知发送记录的关键词/分类/字段名筛选不再受首尾空格与大小写差异影响
 - 学生档案分页、画像分页、按范围取学生，以及知识检索入口也已对齐同一套 `trim + 大小写无关关键词匹配` 规则，减少学生端/管理端联调时的空结果误判
 - 学生档案分页/统计中的 `status` 过滤已改为白名单校验，非法状态会直接返回明确错误，不再以空列表掩盖参数问题
+- 电子证明学生端相关接口已收紧为“仅学生本人发起、查询本人申请、本人撤回/重提”，管理员与辅导员保留审批链路所需的预览/历史查看能力
 
 ## 0. 平台基础能力
 

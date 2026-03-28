@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Objects;
 
 @Service
-@Profile("!mock")
+@Profile("!mock & !kingbase")
 @RequiredArgsConstructor
 public class AcademicWarningService implements AcademicWarningApplicationService {
 

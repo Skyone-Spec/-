@@ -43,7 +43,7 @@ public class MockCertificateService implements CertificateApplicationService {
 
     @Override
     public CertificateRequestResponse create(CertificateRequestCreateRequest request) {
-        currentUserService.requireSelfOrAdmin(request.studentId(), RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
+        requireCertificateOwner(request.studentId());
         validateCertificateType(request.certificateType());
         long id = idGenerator.incrementAndGet();
         approvalTasks.add(0, new ApprovalTaskResponse(
@@ -60,7 +60,7 @@ public class MockCertificateService implements CertificateApplicationService {
 
     @Override
     public List<CertificateRequestResponse> listByStudentId(Long studentId) {
-        currentUserService.requireSelfOrAdmin(studentId, RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
+        requireCertificateOwner(studentId);
         return approvalTasks.stream()
                 .filter(task -> task.studentId().equals(studentId))
                 .map(task -> new CertificateRequestResponse(
@@ -174,7 +174,7 @@ public class MockCertificateService implements CertificateApplicationService {
     @Override
     public CertificateRequestResponse handleStudentAction(Long requestId, CertificateRequestActionRequest request) {
         ApprovalTaskResponse task = findTask(requestId);
-        currentUserService.requireSelfOrAdmin(task.studentId(), RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
+        requireCertificateOwner(task.studentId());
         String action = request.action().trim().toLowerCase();
         if (!"withdraw".equals(action) && !"resubmit".equals(action)) {
             throw new BusinessException("学生端仅支持 withdraw 或 resubmit");
@@ -226,10 +226,7 @@ public class MockCertificateService implements CertificateApplicationService {
         AuthenticatedUser operator = currentUserService.requireCurrentUser();
         String normalizedAction = action.toLowerCase();
         if ("withdraw".equals(normalizedAction) || "resubmit".equals(normalizedAction)) {
-            if (!operator.userId().equals(task.studentId())
-                    && !RoleType.SUPER_ADMIN.name().equals(operator.role())
-                    && !RoleType.COLLEGE_ADMIN.name().equals(operator.role())
-                    && !RoleType.COUNSELOR.name().equals(operator.role())) {
+            if (!operator.userId().equals(task.studentId())) {
                 throw new BusinessException("当前账号无权执行该审批动作");
             }
             return;
@@ -281,6 +278,13 @@ public class MockCertificateService implements CertificateApplicationService {
                 .filter(item -> item.requestId().equals(requestId))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException("审批单不存在"));
+    }
+
+    private void requireCertificateOwner(Long studentId) {
+        AuthenticatedUser user = currentUserService.requireCurrentUser();
+        if (!user.userId().equals(studentId)) {
+            throw new BusinessException("证明申请仅支持学生本人操作");
+        }
     }
 
     private CertificatePreviewResponse toPreview(ApprovalTaskResponse task) {

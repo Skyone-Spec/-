@@ -1,12 +1,16 @@
 package edu.ruc.platform.platform.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.ruc.platform.auth.domain.UserAccount;
 import edu.ruc.platform.auth.domain.LoginAuditLog;
 import edu.ruc.platform.auth.domain.RevokedTokenRecord;
 import edu.ruc.platform.auth.domain.UserSessionRecord;
+import edu.ruc.platform.auth.domain.LatestUser;
 import edu.ruc.platform.auth.dto.StudentDataScopeSnapshot;
 import edu.ruc.platform.auth.repository.UserAccountRepository;
 import edu.ruc.platform.auth.repository.LoginAuditLogRepository;
+import edu.ruc.platform.auth.repository.LatestUserRepository;
 import edu.ruc.platform.auth.repository.RevokedTokenRecordRepository;
 import edu.ruc.platform.auth.repository.UserSessionRecordRepository;
 import edu.ruc.platform.auth.service.StudentDataScopeService;
@@ -18,6 +22,8 @@ import edu.ruc.platform.admin.dto.DataImportErrorItemResponse;
 import edu.ruc.platform.admin.dto.DataImportTaskFilterRequest;
 import edu.ruc.platform.admin.dto.DataImportTaskResponse;
 import edu.ruc.platform.admin.repository.AdminOperationLogRepository;
+import edu.ruc.platform.admin.domain.LatestSysOperationLog;
+import edu.ruc.platform.admin.repository.LatestSysOperationLogRepository;
 import edu.ruc.platform.admin.service.AdminApplicationService;
 import edu.ruc.platform.auth.dto.AuthenticatedUser;
 import edu.ruc.platform.auth.service.CurrentUserService;
@@ -35,6 +41,8 @@ import edu.ruc.platform.common.enums.StudentActionType;
 import edu.ruc.platform.common.enums.StudentActionPriority;
 import edu.ruc.platform.common.exception.BusinessException;
 import edu.ruc.platform.common.support.QueryFilterSupport;
+import edu.ruc.platform.knowledge.domain.LatestFileObject;
+import edu.ruc.platform.knowledge.repository.LatestFileObjectRepository;
 import edu.ruc.platform.platform.dto.PlatformContractResponse;
 import edu.ruc.platform.platform.dto.PlatformFileUploadResponse;
 import edu.ruc.platform.platform.dto.PlatformFileUploadRecordResponse;
@@ -73,6 +81,8 @@ import edu.ruc.platform.student.domain.StudentProfile;
 import edu.ruc.platform.student.repository.StudentProfileRepository;
 import edu.ruc.platform.student.service.StudentProfileApplicationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -80,6 +90,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -103,6 +115,11 @@ public class PlatformService implements PlatformApplicationService {
     private final PlatformUploadPolicyService platformUploadPolicyService;
     private final PlatformNotificationSendRecordService platformNotificationSendRecordService;
     private final StudentDataScopeService studentDataScopeService;
+    private final LatestSysOperationLogRepository latestSysOperationLogRepository;
+    private final LatestUserRepository latestUserRepository;
+    private final LatestFileObjectRepository latestFileObjectRepository;
+    private final ObjectMapper objectMapper;
+    private final Environment environment;
 
     @Override
     public PlatformContractResponse contract() {
@@ -442,6 +459,31 @@ public class PlatformService implements PlatformApplicationService {
         AuthenticatedUser user = currentUserService.requireCurrentUser();
         String normalizedBizType = (bizType == null || bizType.isBlank()) ? "COMMON" : bizType.trim().toUpperCase();
         String originalFileName = file.getOriginalFilename() == null ? "unknown-file" : file.getOriginalFilename();
+        if (isKingbaseProfile()) {
+            LatestFileObject fileObject = new LatestFileObject();
+            fileObject.setPurpose("platform_upload");
+            fileObject.setOriginalName(originalFileName);
+            fileObject.setMimeType(file.getContentType());
+            fileObject.setSizeBytes(file.getSize());
+            fileObject.setStorageProvider("local");
+            fileObject.setStoragePath("/uploads/" + normalizedBizType.toLowerCase() + "/" + System.currentTimeMillis() + "-" + originalFileName);
+            fileObject.setUploadedBy(user.userId());
+            fileObject.setUploadedAt(LocalDateTime.now());
+            fileObject.setIsDeleted(0);
+            fileObject = latestFileObjectRepository.save(fileObject);
+            writeLatestPlatformFileLog(fileObject.getId(), normalizedBizType, bizId, user, "UPLOAD", "SUCCESS", originalFileName);
+            return new PlatformFileUploadResponse(
+                    fileObject.getId(),
+                    normalizedBizType,
+                    bizId,
+                    originalFileName,
+                    file.getContentType(),
+                    file.getSize(),
+                    fileObject.getStoragePath(),
+                    resolveOperatorName(user.userId(), user.name()),
+                    fileObject.getUploadedAt()
+            );
+        }
         PlatformFileUploadRecord record = new PlatformFileUploadRecord();
         record.setBizType(normalizedBizType);
         record.setBizId(bizId);
@@ -473,6 +515,18 @@ public class PlatformService implements PlatformApplicationService {
     public PageResponse<PlatformFileUploadRecordResponse> pageUploadRecords(String bizType, Long bizId, String uploaderKeyword, int page, int size) {
         String normalizedBizType = QueryFilterSupport.normalizeUpper(bizType);
         String normalizedUploaderKeyword = QueryFilterSupport.trimToNull(uploaderKeyword);
+        if (isKingbaseProfile()) {
+            List<PlatformFileUploadRecordResponse> filtered = latestFileObjectRepository.findByPurposeAndIsDeleted("platform_upload", 0).stream()
+                    .map(this::toLatestUploadRecordResponse)
+                    .filter(Objects::nonNull)
+                    .filter(item -> normalizedBizType == null || normalizedBizType.equalsIgnoreCase(item.bizType()))
+                    .filter(item -> bizId == null || bizId.equals(item.bizId()))
+                    .filter(item -> normalizedUploaderKeyword == null
+                            || QueryFilterSupport.containsIgnoreCase(item.uploadedBy(), normalizedUploaderKeyword))
+                    .sorted(java.util.Comparator.comparing(PlatformFileUploadRecordResponse::uploadedAt).reversed())
+                    .toList();
+            return toPage(filtered, page, size);
+        }
         List<PlatformFileUploadRecordResponse> filtered = platformFileUploadRecordRepository.findAll().stream()
                 .filter(item -> normalizedBizType == null || normalizedBizType.equalsIgnoreCase(item.getBizType()))
                 .filter(item -> bizId == null || bizId.equals(item.getBizId()))
@@ -500,6 +554,28 @@ public class PlatformService implements PlatformApplicationService {
 
     @Override
     public PlatformFileUploadRecordResponse archiveUploadRecord(Long id) {
+        if (isKingbaseProfile()) {
+            LatestFileObject fileObject = latestFileObjectRepository.findById(id)
+                    .filter(item -> "platform_upload".equals(item.getPurpose()) && item.getIsDeleted() != null && item.getIsDeleted() == 0)
+                    .orElseThrow(() -> new BusinessException("上传记录不存在"));
+            PlatformUploadState state = loadPlatformUploadState(fileObject.getId());
+            AuthenticatedUser user = currentUserService.requireCurrentUser();
+            writeLatestPlatformFileLog(fileObject.getId(), state.bizType(), state.bizId(), user, "ARCHIVE", "SUCCESS", fileObject.getOriginalName());
+            return new PlatformFileUploadRecordResponse(
+                    fileObject.getId(),
+                    state.bizType(),
+                    state.bizId(),
+                    fileObject.getOriginalName(),
+                    fileObject.getMimeType(),
+                    fileObject.getSizeBytes(),
+                    fileObject.getStoragePath(),
+                    fileObject.getUploadedBy(),
+                    resolveOperatorName(fileObject.getUploadedBy(), null),
+                    true,
+                    false,
+                    fileObject.getUploadedAt()
+            );
+        }
         PlatformFileUploadRecord record = platformFileUploadRecordRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("上传记录不存在"));
         record.setArchived(Boolean.TRUE);
@@ -524,6 +600,17 @@ public class PlatformService implements PlatformApplicationService {
 
     @Override
     public void deleteUploadRecord(Long id) {
+        if (isKingbaseProfile()) {
+            LatestFileObject fileObject = latestFileObjectRepository.findById(id)
+                    .filter(item -> "platform_upload".equals(item.getPurpose()) && item.getIsDeleted() != null && item.getIsDeleted() == 0)
+                    .orElseThrow(() -> new BusinessException("上传记录不存在"));
+            PlatformUploadState state = loadPlatformUploadState(fileObject.getId());
+            fileObject.setIsDeleted(1);
+            latestFileObjectRepository.save(fileObject);
+            writeLatestPlatformFileLog(fileObject.getId(), state.bizType(), state.bizId(), currentUserService.requireCurrentUser(),
+                    "DELETE", "SUCCESS", fileObject.getOriginalName());
+            return;
+        }
         PlatformFileUploadRecord record = platformFileUploadRecordRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("上传记录不存在"));
         record.setDeleted(Boolean.TRUE);
@@ -952,6 +1039,27 @@ public class PlatformService implements PlatformApplicationService {
 
     private void writePlatformOperationLog(String module, String action, String target, String result, String detail) {
         AuthenticatedUser operator = currentUserService.requireCurrentUser();
+        if (isKingbaseProfile()) {
+            LatestSysOperationLog log = new LatestSysOperationLog();
+            log.setModuleCode(module.toLowerCase(java.util.Locale.ROOT));
+            log.setBusinessType(module.toLowerCase(java.util.Locale.ROOT));
+            log.setBusinessId(extractBusinessId(target));
+            log.setOperationType(action.toLowerCase(java.util.Locale.ROOT));
+            log.setOperationDesc(detail == null || detail.isBlank() ? target : detail);
+            log.setOperatorUserId(operator.userId());
+            log.setTraceId("trace-platform-" + module.toLowerCase(java.util.Locale.ROOT) + "-" + System.currentTimeMillis());
+            log.setRequestUri(null);
+            log.setRequestMethod(null);
+            log.setRequestIp(null);
+            log.setUserAgent(null);
+            log.setLogLevel("audit");
+            log.setResultStatus(mapResultStatus(result));
+            log.setErrorMessage("fail".equals(mapResultStatus(result)) ? detail : null);
+            log.setExtJson(buildPlatformLogExtJson(operator, target));
+            log.setCreatedAt(LocalDateTime.now());
+            latestSysOperationLogRepository.save(log);
+            return;
+        }
         AdminOperationLog log = new AdminOperationLog();
         log.setOperatorId(operator.userId());
         log.setOperatorName(operator.name());
@@ -962,6 +1070,149 @@ public class PlatformService implements PlatformApplicationService {
         log.setResult(result);
         log.setDetail(detail);
         adminOperationLogRepository.save(log);
+    }
+
+    private boolean isKingbaseProfile() {
+        return environment.acceptsProfiles(Profiles.of("kingbase"));
+    }
+
+    private Long extractBusinessId(String target) {
+        if (target == null || !target.contains("#")) {
+            return null;
+        }
+        String candidate = target.substring(target.indexOf('#') + 1).trim();
+        return candidate.matches("\\d+") ? Long.valueOf(candidate) : null;
+    }
+
+    private String mapResultStatus(String result) {
+        if (result == null) {
+            return "partial";
+        }
+        return switch (result.trim().toUpperCase(java.util.Locale.ROOT)) {
+            case "SUCCESS", "APPROVED", "COUNSELOR_APPROVED", "SENT" -> "success";
+            case "FAILED", "REJECTED" -> "fail";
+            default -> "partial";
+        };
+    }
+
+    private String buildPlatformLogExtJson(AuthenticatedUser operator, String target) {
+        String operatorName = latestUserRepository.findById(operator.userId())
+                .map(LatestUser::getFullName)
+                .orElse(operator.name());
+        return "{\"operatorName\":\"" + operatorName + "\",\"operatorRole\":\"" + operator.role() + "\",\"target\":\"" + (target == null ? "" : target.replace("\"", "'")) + "\"}";
+    }
+
+    private PlatformFileUploadRecordResponse toLatestUploadRecordResponse(LatestFileObject fileObject) {
+        PlatformUploadState state = loadPlatformUploadState(fileObject.getId());
+        if (state == null) {
+            return null;
+        }
+        return new PlatformFileUploadRecordResponse(
+                fileObject.getId(),
+                state.bizType(),
+                state.bizId(),
+                fileObject.getOriginalName(),
+                fileObject.getMimeType(),
+                fileObject.getSizeBytes(),
+                fileObject.getStoragePath(),
+                fileObject.getUploadedBy(),
+                resolveOperatorName(fileObject.getUploadedBy(), null),
+                state.archived(),
+                false,
+                fileObject.getUploadedAt()
+        );
+    }
+
+    private PlatformUploadState loadPlatformUploadState(Long fileId) {
+        List<LatestSysOperationLog> logs = latestSysOperationLogRepository.findAll().stream()
+                .filter(item -> "platform_file".equalsIgnoreCase(item.getBusinessType()))
+                .filter(item -> fileId.equals(item.getBusinessId()))
+                .sorted(java.util.Comparator.comparing(LatestSysOperationLog::getCreatedAt))
+                .toList();
+        if (logs.isEmpty()) {
+            return null;
+        }
+        String bizType = "COMMON";
+        Long bizId = null;
+        boolean archived = false;
+        for (LatestSysOperationLog log : logs) {
+            Map<String, Object> meta = parseLogExt(log.getExtJson());
+            if (meta.get("bizType") != null) {
+                bizType = String.valueOf(meta.get("bizType"));
+            }
+            if (meta.get("bizId") != null && String.valueOf(meta.get("bizId")).matches("\\d+")) {
+                bizId = Long.valueOf(String.valueOf(meta.get("bizId")));
+            }
+            if ("archive".equalsIgnoreCase(log.getOperationType())) {
+                archived = true;
+            }
+        }
+        return new PlatformUploadState(bizType, bizId, archived);
+    }
+
+    private void writeLatestPlatformFileLog(Long fileId,
+                                            String bizType,
+                                            Long bizId,
+                                            AuthenticatedUser operator,
+                                            String action,
+                                            String result,
+                                            String fileName) {
+        LatestSysOperationLog log = new LatestSysOperationLog();
+        log.setModuleCode("platform_file");
+        log.setBusinessType("platform_file");
+        log.setBusinessId(fileId);
+        log.setOperationType(action.toLowerCase(java.util.Locale.ROOT));
+        log.setOperationDesc(fileName);
+        log.setOperatorUserId(operator.userId());
+        log.setTraceId("trace-platform-file-" + fileId + "-" + System.currentTimeMillis());
+        log.setRequestUri("/api/v1/platform/files/" + fileId);
+        log.setRequestMethod("UPLOAD".equals(action) ? "POST" : "PATCH");
+        log.setRequestIp(null);
+        log.setUserAgent(null);
+        log.setLogLevel("audit");
+        log.setResultStatus(mapResultStatus(result));
+        log.setErrorMessage(null);
+        log.setExtJson(buildPlatformFileLogExtJson(operator, bizType, bizId, fileName));
+        log.setCreatedAt(LocalDateTime.now());
+        latestSysOperationLogRepository.save(log);
+    }
+
+    private String buildPlatformFileLogExtJson(AuthenticatedUser operator, String bizType, Long bizId, String fileName) {
+        Map<String, Object> payload = new java.util.LinkedHashMap<>();
+        payload.put("operatorName", resolveOperatorName(operator.userId(), operator.name()));
+        payload.put("operatorRole", operator.role());
+        payload.put("bizType", bizType);
+        payload.put("bizId", bizId);
+        payload.put("fileName", fileName);
+        try {
+            return objectMapper.writeValueAsString(payload);
+        } catch (Exception ex) {
+            return "{}";
+        }
+    }
+
+    private Map<String, Object> parseLogExt(String extJson) {
+        if (extJson == null || extJson.isBlank()) {
+            return java.util.Map.of();
+        }
+        try {
+            return objectMapper.readValue(extJson, new TypeReference<>() {
+            });
+        } catch (Exception ex) {
+            return java.util.Map.of();
+        }
+    }
+
+    private String resolveOperatorName(Long userId, String fallback) {
+        if (userId == null) {
+            return fallback == null ? "system" : fallback;
+        }
+        return latestUserRepository.findById(userId)
+                .map(LatestUser::getFullName)
+                .orElse(fallback == null ? "user#" + userId : fallback);
+    }
+
+    private record PlatformUploadState(String bizType, Long bizId, boolean archived) {
     }
 
     private <T> PageResponse<T> toPage(List<T> items, int page, int size) {

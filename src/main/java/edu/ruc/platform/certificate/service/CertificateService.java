@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-@Profile("!mock")
+@Profile("!mock & !kingbase")
 @RequiredArgsConstructor
 public class CertificateService implements CertificateApplicationService {
 
@@ -49,7 +49,7 @@ public class CertificateService implements CertificateApplicationService {
 
     @Override
     public CertificateRequestResponse create(CertificateRequestCreateRequest request) {
-        currentUserService.requireSelfOrAdmin(request.studentId(), RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
+        requireCertificateOwner(request.studentId());
         validateCertificateType(request.certificateType());
         CertificateRequest entity = new CertificateRequest();
         entity.setStudentId(request.studentId());
@@ -71,7 +71,7 @@ public class CertificateService implements CertificateApplicationService {
 
     @Override
     public List<CertificateRequestResponse> listByStudentId(Long studentId) {
-        currentUserService.requireSelfOrAdmin(studentId, RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
+        requireCertificateOwner(studentId);
         return certificateRequestRepository.findByStudentId(studentId)
                 .stream()
                 .map(entity -> new CertificateRequestResponse(
@@ -335,10 +335,7 @@ public class CertificateService implements CertificateApplicationService {
     private void validateOperatorPermission(CertificateRequest entity, AuthenticatedUser operator, String action) {
         String normalizedAction = action.trim().toLowerCase();
         if ("withdraw".equals(normalizedAction) || "resubmit".equals(normalizedAction)) {
-            if (!operator.userId().equals(entity.getStudentId())
-                    && !RoleType.SUPER_ADMIN.name().equals(operator.role())
-                    && !RoleType.COLLEGE_ADMIN.name().equals(operator.role())
-                    && !RoleType.COUNSELOR.name().equals(operator.role())) {
+            if (!operator.userId().equals(entity.getStudentId())) {
                 throw new BusinessException("当前账号无权执行该审批动作");
             }
             return;
@@ -407,6 +404,13 @@ public class CertificateService implements CertificateApplicationService {
                 .orElseThrow(() -> new BusinessException("审批单不存在"));
         currentUserService.requireSelfOrAdmin(entity.getStudentId(), RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
         return entity;
+    }
+
+    private void requireCertificateOwner(Long studentId) {
+        AuthenticatedUser user = currentUserService.requireCurrentUser();
+        if (!user.userId().equals(studentId)) {
+            throw new BusinessException("证明申请仅支持学生本人操作");
+        }
     }
 
     private String buildPdfPath(CertificateRequest entity) {

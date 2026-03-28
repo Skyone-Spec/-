@@ -94,7 +94,33 @@ class ErrorFlowIntegrationTest {
         mockMvc.perform(get("/api/v1/certificates/requests/student/10001")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("证明申请仅支持学生本人操作"));
+    }
+
+    @Test
+    void adminCannotCreateOrQueryCertificateRequestForStudent() throws Exception {
+        String token = loginAndExtractToken("admin", "123456");
+
+        mockMvc.perform(post("/api/v1/certificates/requests")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "studentId": 10001,
+                                  "certificateType": "在读证明",
+                                  "reason": "管理员代提交"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("证明申请仅支持学生本人操作"));
+
+        mockMvc.perform(get("/api/v1/certificates/requests/student/10001")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("证明申请仅支持学生本人操作"));
     }
 
     @Test

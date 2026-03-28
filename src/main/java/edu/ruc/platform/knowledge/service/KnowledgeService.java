@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Locale;
 
 @Service
-@Profile("!mock")
+@Profile("!mock & !kingbase")
 @RequiredArgsConstructor
 public class KnowledgeService implements KnowledgeApplicationService {
 

@@ -24,7 +24,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 
 @Service
-@Profile("!mock")
+@Profile("!mock & !kingbase")
 @RequiredArgsConstructor
 public class AuthService implements AuthApplicationService {
 

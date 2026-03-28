@@ -73,6 +73,25 @@
 
 当前仓库只覆盖“人员 2：后端 + 业务逻辑负责人”的工作范围，不包含小程序页面、PC 管理后台页面和项目整合交付。
 
+## 需求落地状态
+
+结合 `需求整合` 中 2026-03-23 需求差异文档，当前后端已明确落地的需求包括：
+
+- 多级角色与账号权限模型
+- 学生数据范围控制与班主任负责范围收敛
+- 知识库管理、附件上传、模板下载
+- 审批流、审批历史、管理员操作日志
+- 导入任务、导入错误明细、导入结果回执
+- 学生状态字段、状态历史、学生画像元数据
+- 平台安全策略、上传策略、文件上传与通知发送记录
+- 电子证明“仅学生本人申请/查询/学生端撤回重提”的权限校验
+
+当前仍应视为“部分完成 / 继续迭代”的需求包括：
+
+- Kingbase 真实数据联调与桥接脚本落库验收
+- 学业分析的保守型规则继续细化，但不输出高风险自动毕业判断
+- 部分平台/管理能力的真实数据闭环验证，而不只是 mock 联调
+
 ## 已提供接口
 
 - `POST /api/v1/auth/login`
@@ -218,6 +237,98 @@
 - 角色枚举统一复用 `RoleType`：`STUDENT`、`CLASS_LEADER`、`LEAGUE_SECRETARY`、`COUNSELOR`、`CLASS_ADVISOR`、`COLLEGE_ADMIN`、`SUPER_ADMIN`、`ASSISTANT`
 - 权限校验统一通过 `CurrentUserService`，学生数据范围能力对内复用 `StudentDataScopeService`
 - 通用返回统一为 `ApiResponse<T>`，分页统一为 `ApiResponse<PageResponse<T>>`
+
+## 最新数据库对接
+
+`db/kingbase_schema.sql` 是 2026-03-27 新更新的统一数据库模型，表命名已经切到：
+
+- `sys_*`：统一用户/认证/权限
+- `kb_*`：知识库
+- `notice_*`：通知公告
+- `party_*`：党团流程
+- `affair_* / cert_*`：办事与证明
+- `aca_*`：学业审核
+
+而当前后端非 mock 模式仍然围绕历史 JPA 表：
+
+- `user_account`
+- `student_profile`
+- `knowledge_document`
+- `notice`
+- `certificate_request`
+- `academic_warning_record`
+- 以及审批、画像、工作日志、平台审计等扩展表
+
+为避免一次性大改 Java 服务层，仓库新增了桥接脚本：
+
+- [db/kingbase_backend_bridge.sql](/home/skyone/spec/student-service-platform-backend/db/kingbase_backend_bridge.sql)
+
+它做两件事：
+
+- 在 `campus` schema 下补齐当前后端依赖但新总库中不存在的扩展表
+- 将 `sys_* / kb_* / notice_* / party_* / cert_* / aca_*` 中可直接映射的数据导入到当前后端使用的旧表
+
+建议接入顺序：
+
+1. 先执行 `db/kingbase_schema.sql`
+2. 再执行 `db/kingbase_backend_bridge.sql`
+3. 启动应用时切换到 `kingbase` profile：`--spring.profiles.active=kingbase`
+
+也可以直接用初始化脚本：
+
+- [scripts/init-kingbase-bridge.sh](/home/skyone/spec/student-service-platform-backend/scripts/init-kingbase-bridge.sh)
+
+示例：
+
+```bash
+cd /home/skyone/spec/student-service-platform-backend
+DB_HOST=127.0.0.1 DB_PORT=54321 DB_NAME=student_service_platform DB_USER=postgres DB_PASSWORD=postgres LOAD_SAMPLE_DATA=true \
+  bash scripts/init-kingbase-bridge.sh
+java -jar target/student-service-platform-backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=kingbase
+```
+
+说明：
+
+- `LOAD_SAMPLE_DATA=true` 时会先执行 [db/campus_sample_data.sql](/home/skyone/spec/student-service-platform-backend/db/campus_sample_data.sql)
+- 桥接脚本会把最新样例库里的用户、学生档案、知识库、通知、审批、学业审核、导入任务、操作日志同步到当前后端依赖表
+- 对于最新样例库里无法直接用于 BCrypt 校验的占位密码，桥接脚本会统一回填演示密码 `123456`
+
+对应配置文件：
+
+- [src/main/resources/application-kingbase.yml](/home/skyone/spec/student-service-platform-backend/src/main/resources/application-kingbase.yml)
+
+当前桥接策略说明：
+
+- 这是“先跑通后端”的兼容层，不是最终态领域模型
+- 新库到旧表是初始化导入，不做双向同步
+- 如果后续要彻底统一到 `sys_* / kb_* / notice_* ...`，需要继续把 JPA 实体和 Service 改成新模型
+- `application-dev.yml` 已补 `hibernate.default_schema=campus`，避免非 mock 模式默认查到 `public` schema
+
+当前已开始原生接最新库的模块：
+
+- 认证模块在 `kingbase` profile 下优先直连 `sys_user / sys_user_auth / sys_user_role / sys_student_ext`
+- 知识库学生侧接口在 `kingbase` profile 下优先直连 `kb_policy / cert_template / file_object`
+- 证明申请学生侧主流程在 `kingbase` profile 下优先直连 `affair_request / cert_application / workflow_*`
+- 证明审批列表/统计/处理与申请预览在 `kingbase` profile 下优先直连 `affair_request / cert_application / workflow_*`
+- 学生档案核心信息在 `kingbase` profile 下优先直连 `sys_user / sys_student_ext`
+- 学生通知列表在 `kingbase` profile 下优先直连 `notice_item / notice_item_tag / notice_tag_dict`
+- 党团进度与提醒在 `kingbase` profile 下优先直连 `party_student_progress / party_flow_node / party_reminder_task`
+- 管理端通知列表/分页/统计/创建在 `kingbase` profile 下优先直连 `notice_item / notice_item_tag / notice_tag_dict / notice_delivery`
+- 管理端知识库列表/分页/统计/增改/附件管理在 `kingbase` profile 下优先直连 `kb_policy / file_object`
+- 学业分析与预警在 `kingbase` profile 下优先直连 `aca_audit_report / aca_audit_missing / aca_course_recommendation / aca_term_course`
+- 平台统计、管理操作日志、导入任务主表在 `kingbase` profile 下优先直连 `sys_user / notice_item / kb_policy / sys_operation_log / audit_import_job`
+- 平台服务侧产生的操作日志在 `kingbase` profile 下同步写入 `sys_operation_log`
+- 导入错误明细在 `kingbase` profile 下优先内嵌到 `audit_import_job.result_json.errors`
+- 平台上传记录在 `kingbase` profile 下优先使用 `file_object` 存储文件元数据，并通过 `sys_operation_log` 回放 `bizType / bizId / archived`
+- 登录失败次数、锁定时间、会话黑名单等平台安全辅助状态仍复用现有后端表
+
+当前仍通过桥接表运行的模块：
+
+- 学生画像、状态轨迹等扩展档案，当前仍复用 `student_portrait / student_status_history`
+- 班主任负责范围，当前仍复用 `advisor_scope_binding`
+- 学生工作日志，当前仍复用 `student_work_log / student_work_log_action_log`
+- 平台安全与会话辅助状态，当前仍复用 `user_account / login_audit_log / user_session_record / revoked_token_record`
+- 平台通知发送记录与平台系统配置，当前仍复用 `platform_notification_send_record / platform_system_setting`
 - 文件上传统一返回 `PlatformFileUploadResponse`
 - 审批状态统一复用 `ApprovalStatus`：`PENDING`、`COUNSELOR_APPROVED`、`APPROVED`、`REJECTED`、`WITHDRAWN`
 - 审批日志字段统一为 `operatorId`、`operatorName`、`operatorRole`、`action`、`fromStatus`、`toStatus`、`comment`、`operatedAt`
