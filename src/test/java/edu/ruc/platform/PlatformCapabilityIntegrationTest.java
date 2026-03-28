@@ -332,6 +332,16 @@ class PlatformCapabilityIntegrationTest {
                 .andExpect(jsonPath("$.data.page").value(0))
                 .andExpect(jsonPath("$.data.size").value(1));
 
+        mockMvc.perform(get("/api/v1/platform/files/page")
+                        .param("bizType", " knowledge_attachment ")
+                        .param("uploaderKeyword", " 管理 ")
+                        .param("page", "0")
+                        .param("size", "5")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.content[0].bizType").value("KNOWLEDGE_ATTACHMENT"));
+
         mockMvc.perform(post("/api/v1/platform/files/1001/archive")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
@@ -343,6 +353,18 @@ class PlatformCapabilityIntegrationTest {
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content").isArray());
+
+        mockMvc.perform(get("/api/v1/platform/audit/login-logs/page")
+                        .param("action", " login ")
+                        .param("result", " success ")
+                        .param("keyword", " admin ")
+                        .param("page", "0")
+                        .param("size", "5")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.content[0].action").value("LOGIN"))
+                .andExpect(jsonPath("$.data.content[0].result").value("SUCCESS"));
 
         mockMvc.perform(post("/api/v1/platform/sessions/8001/revoke")
                         .header("Authorization", "Bearer " + adminToken))

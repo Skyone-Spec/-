@@ -4,7 +4,9 @@ import edu.ruc.platform.auth.dto.AuthenticatedUser;
 import edu.ruc.platform.auth.service.CurrentUserService;
 import edu.ruc.platform.auth.service.StudentDataScopeService;
 import edu.ruc.platform.common.api.PageResponse;
+import edu.ruc.platform.common.enums.RoleType;
 import edu.ruc.platform.common.exception.BusinessException;
+import edu.ruc.platform.common.support.QueryFilterSupport;
 import edu.ruc.platform.student.domain.AdvisorScopeBinding;
 import edu.ruc.platform.student.domain.StudentProfile;
 import edu.ruc.platform.student.repository.AdvisorScopeBindingRepository;
@@ -149,6 +151,9 @@ public class StudentWorkLogService implements StudentWorkLogApplicationService {
 
     @Override
     public List<StudentWorkLogResponse> filter(WorklogFilterRequest request, String sortBy, String sortDir) {
+        validateFilterRequest(request);
+        String normalizedCategory = QueryFilterSupport.trimToNull(request.category());
+        String normalizedRecorderRole = QueryFilterSupport.normalizeUpper(request.recorderRole());
         java.util.Map<Long, edu.ruc.platform.student.domain.StudentProfile> studentMap = studentProfileRepository.findAll().stream()
                 .collect(java.util.stream.Collectors.toMap(
                         edu.ruc.platform.student.domain.StudentProfile::getId,
@@ -156,8 +161,8 @@ public class StudentWorkLogService implements StudentWorkLogApplicationService {
                 ));
         return sortLogs(visibleLogs().stream()
                 .filter(item -> request.studentId() == null || item.getStudentId().equals(request.studentId()))
-                .filter(item -> request.category() == null || request.category().equals(item.getCategory()))
-                .filter(item -> request.recorderRole() == null || request.recorderRole().equals(item.getRecorderRole()))
+                .filter(item -> normalizedCategory == null || normalizedCategory.equalsIgnoreCase(item.getCategory()))
+                .filter(item -> normalizedRecorderRole == null || normalizedRecorderRole.equalsIgnoreCase(item.getRecorderRole()))
                 .filter(item -> request.grade() == null || request.grade().isBlank() || matchesGrade(studentMap.get(item.getStudentId()), request.grade()))
                 .filter(item -> request.className() == null || request.className().isBlank() || matchesClassName(studentMap.get(item.getStudentId()), request.className()))
                 .filter(item -> request.startDate() == null || !item.getWorkDate().isBefore(request.startDate()))
@@ -390,20 +395,35 @@ public class StudentWorkLogService implements StudentWorkLogApplicationService {
         return profile != null && className.equals(profile.getClassName());
     }
 
+    private void validateFilterRequest(WorklogFilterRequest request) {
+        if (request == null) {
+            return;
+        }
+        QueryFilterSupport.requireEnumValue(RoleType.class, request.recorderRole(), "记录人角色不支持: ");
+    }
+
     private List<StudentWorkLogResponse> sortLogs(List<StudentWorkLogResponse> logs, String sortBy, String sortDir) {
-        if (!List.of("workDate", "workloadScore", "createdAt", "studentName").contains(sortBy)) {
+        String normalizedSortBy = QueryFilterSupport.trimToNull(sortBy);
+        String normalizedSortDir = QueryFilterSupport.trimToNull(sortDir);
+        if (normalizedSortBy == null) {
+            normalizedSortBy = "workDate";
+        }
+        if (normalizedSortDir == null) {
+            normalizedSortDir = "desc";
+        }
+        if (!List.of("workDate", "workloadScore", "createdAt", "studentName").contains(normalizedSortBy)) {
             throw new BusinessException("不支持的排序字段");
         }
-        if (!List.of("asc", "desc").contains(sortDir.toLowerCase())) {
+        if (!List.of("asc", "desc").contains(normalizedSortDir.toLowerCase())) {
             throw new BusinessException("不支持的排序方向");
         }
-        java.util.Comparator<StudentWorkLogResponse> comparator = switch (sortBy) {
+        java.util.Comparator<StudentWorkLogResponse> comparator = switch (normalizedSortBy) {
             case "workloadScore" -> java.util.Comparator.comparing(StudentWorkLogResponse::workloadScore);
             case "createdAt" -> java.util.Comparator.comparing(StudentWorkLogResponse::createdAt);
             case "studentName" -> java.util.Comparator.comparing(StudentWorkLogResponse::studentName);
             default -> java.util.Comparator.comparing(StudentWorkLogResponse::workDate);
         };
-        if (!"asc".equalsIgnoreCase(sortDir)) {
+        if (!"asc".equalsIgnoreCase(normalizedSortDir)) {
             comparator = comparator.reversed();
         }
         return logs.stream().sorted(comparator).toList();

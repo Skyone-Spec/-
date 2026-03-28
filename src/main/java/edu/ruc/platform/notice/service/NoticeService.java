@@ -50,7 +50,7 @@ public class NoticeService implements NoticeApplicationService {
                         notice.getId(),
                         notice.getTitle(),
                         notice.getSummary(),
-                        notice.getTag() == null ? List.of() : List.of(notice.getTag()),
+                        resolveTags(notice),
                         buildTargetDescription(notice),
                         resolvePriority(notice, studentProfile),
                         resolveMatchedRules(notice, studentProfile),
@@ -152,5 +152,15 @@ public class NoticeService implements NoticeApplicationService {
             return List.of("IN_APP", "EMAIL");
         }
         return List.of("IN_APP");
+    }
+
+    private List<String> resolveTags(Notice notice) {
+        if (notice.getTag() == null || notice.getTag().isBlank()) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(notice.getTag().split(","))
+                .map(String::trim)
+                .filter(tag -> !tag.isEmpty())
+                .toList();
     }
 }

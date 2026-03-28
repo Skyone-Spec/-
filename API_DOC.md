@@ -34,6 +34,11 @@
   - 权限校验入口统一复用 `CurrentUserService`
 - 分页接口统一为 `ApiResponse<PageResponse<T>>`
 - 分页请求参数统一为 `page`、`size`
+- 本轮已补充常用输入边界约束：
+  - 分页参数统一要求 `page >= 0`、`size >= 1`
+  - 路径/查询中的主键类字段统一要求大于 0
+  - 导入错误查询中的 `rowNumber` 要求大于 0
+  - 非法输入统一返回 `400 Bad Request`
 
 ## 平台契约清单
 
@@ -52,6 +57,7 @@
   - 成功返回固定字段：`success`、`message`、`data`
   - 分页响应统一为 `ApiResponse<PageResponse<T>>`
   - 分页字段统一为 `content`、`totalElements`、`totalPages`、`page`、`size`
+  - 分页参数边界统一为 `page >= 0`、`size >= 1`
 - 文件上传返回：
   - 统一返回 `PlatformFileUploadResponse`
   - 字段统一为 `id`、`bizType`、`bizId`、`fileName`、`contentType`、`fileSize`、`storagePath`、`uploadedBy`、`uploadedAt`
@@ -70,6 +76,29 @@
   - 优先级枚举统一复用 `studentActionPriorities`
   - 默认跳转统一复用 `studentActionPaths`
   - 前端展示元数据统一通过 `GET /api/v1/platform/student-ui-contract`
+
+## 当前问题与本轮修复
+
+已确认的薄弱点：
+
+- 部分接口此前缺少统一的分页参数、主键参数边界校验
+- 学生档案、状态历史、学生画像在 `mock` 与非 `mock` 模式下校验强度不一致
+- 非法输入的错误路径测试覆盖不足
+
+本轮已优先修复：
+
+- 高频后台接口的 `page` / `size` / `studentId` / `userId` / `requestId` / `taskId` / `rowNumber` 等参数边界
+- 非 `mock` 模式下学生档案、状态流转、画像维护的核心业务校验
+- 对应的错误流集成测试
+- 方法级参数校验错误统一去掉方法名前缀，前端可直接展示中文错误信息
+- 平台用户、导入任务、通知发送补充了部分跨字段业务校验
+- 平台列表筛选项开始按白名单校验，错误的 `role` / `status` / `channel` 不再静默返回空列表
+- 工作记录与审批列表也开始对白名单筛选项做提前校验，例如 `recorderRole`、`approval status`、`certificateType`
+- 常用筛选值开始统一做 `trim` 与必要的大小写归一化，例如 `COUNSELOR/counselor`、通知标签前后空格不会再导致误筛空结果
+- 上述筛选规范化与大小写无关匹配已下沉到公共辅助类，`mock` / 非 `mock` 共享同一套参数处理规则，避免一侧修复另一侧遗漏
+- 管理端剩余列表接口也已补齐同类口径：导入任务、操作日志、知识库、导入错误、班主任负责范围、通知发送记录的关键词/分类/字段名筛选不再受首尾空格与大小写差异影响
+- 学生档案分页、画像分页、按范围取学生，以及知识检索入口也已对齐同一套 `trim + 大小写无关关键词匹配` 规则，减少学生端/管理端联调时的空结果误判
+- 学生档案分页/统计中的 `status` 过滤已改为白名单校验，非法状态会直接返回明确错误，不再以空列表掩盖参数问题
 
 ## 0. 平台基础能力
 

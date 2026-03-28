@@ -3,7 +3,9 @@ package edu.ruc.platform.worklog.service;
 import edu.ruc.platform.auth.dto.AuthenticatedUser;
 import edu.ruc.platform.auth.service.CurrentUserService;
 import edu.ruc.platform.common.api.PageResponse;
+import edu.ruc.platform.common.enums.RoleType;
 import edu.ruc.platform.common.exception.BusinessException;
+import edu.ruc.platform.common.support.QueryFilterSupport;
 import edu.ruc.platform.worklog.dto.StudentWorkLogCreateRequest;
 import edu.ruc.platform.worklog.dto.StudentWorkLogResponse;
 import edu.ruc.platform.worklog.dto.StudentWorkLogUpdateRequest;
@@ -164,10 +166,13 @@ public class MockStudentWorkLogService implements StudentWorkLogApplicationServi
 
     @Override
     public List<StudentWorkLogResponse> filter(WorklogFilterRequest request, String sortBy, String sortDir) {
+        validateFilterRequest(request);
+        String normalizedCategory = QueryFilterSupport.trimToNull(request.category());
+        String normalizedRecorderRole = QueryFilterSupport.normalizeUpper(request.recorderRole());
         return sortLogs(scopedLogs(currentUserService.requireCurrentUser()).stream()
                 .filter(item -> request.studentId() == null || item.studentId().equals(request.studentId()))
-                .filter(item -> request.category() == null || request.category().equals(item.category()))
-                .filter(item -> request.recorderRole() == null || request.recorderRole().equals(item.recorderRole()))
+                .filter(item -> normalizedCategory == null || normalizedCategory.equalsIgnoreCase(item.category()))
+                .filter(item -> normalizedRecorderRole == null || normalizedRecorderRole.equalsIgnoreCase(item.recorderRole()))
                 .filter(item -> request.grade() == null || request.grade().isBlank() || request.grade().equals(resolveProfile(item.studentId()).grade()))
                 .filter(item -> request.className() == null || request.className().isBlank() || request.className().equals(resolveProfile(item.studentId()).className()))
                 .filter(item -> request.startDate() == null || !item.workDate().isBefore(request.startDate()))
@@ -398,22 +403,37 @@ public class MockStudentWorkLogService implements StudentWorkLogApplicationServi
     }
 
     private List<StudentWorkLogResponse> sortLogs(List<StudentWorkLogResponse> logs, String sortBy, String sortDir) {
-        if (!List.of("workDate", "workloadScore", "createdAt", "studentName").contains(sortBy)) {
+        String normalizedSortBy = QueryFilterSupport.trimToNull(sortBy);
+        String normalizedSortDir = QueryFilterSupport.trimToNull(sortDir);
+        if (normalizedSortBy == null) {
+            normalizedSortBy = "workDate";
+        }
+        if (normalizedSortDir == null) {
+            normalizedSortDir = "desc";
+        }
+        if (!List.of("workDate", "workloadScore", "createdAt", "studentName").contains(normalizedSortBy)) {
             throw new BusinessException("不支持的排序字段");
         }
-        if (!List.of("asc", "desc").contains(sortDir.toLowerCase())) {
+        if (!List.of("asc", "desc").contains(normalizedSortDir.toLowerCase())) {
             throw new BusinessException("不支持的排序方向");
         }
-        java.util.Comparator<StudentWorkLogResponse> comparator = switch (sortBy) {
+        java.util.Comparator<StudentWorkLogResponse> comparator = switch (normalizedSortBy) {
             case "workloadScore" -> java.util.Comparator.comparing(StudentWorkLogResponse::workloadScore);
             case "createdAt" -> java.util.Comparator.comparing(StudentWorkLogResponse::createdAt);
             case "studentName" -> java.util.Comparator.comparing(StudentWorkLogResponse::studentName);
             default -> java.util.Comparator.comparing(StudentWorkLogResponse::workDate);
         };
-        if (!"asc".equalsIgnoreCase(sortDir)) {
+        if (!"asc".equalsIgnoreCase(normalizedSortDir)) {
             comparator = comparator.reversed();
         }
         return logs.stream().sorted(comparator).toList();
+    }
+
+    private void validateFilterRequest(WorklogFilterRequest request) {
+        if (request == null) {
+            return;
+        }
+        QueryFilterSupport.requireEnumValue(RoleType.class, request.recorderRole(), "记录人角色不支持: ");
     }
 
     private String resolveScoreBand(Integer score) {

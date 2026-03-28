@@ -4,6 +4,7 @@ import edu.ruc.platform.admin.dto.KnowledgeAttachmentResponse;
 import edu.ruc.platform.admin.repository.KnowledgeAttachmentRepository;
 import edu.ruc.platform.certificate.repository.CertificateRequestRepository;
 import edu.ruc.platform.common.exception.BusinessException;
+import edu.ruc.platform.common.support.QueryFilterSupport;
 import edu.ruc.platform.knowledge.dto.KnowledgeDetailResponse;
 import edu.ruc.platform.knowledge.dto.KnowledgeSearchResponse;
 import edu.ruc.platform.knowledge.repository.KnowledgeDocumentRepository;
@@ -35,12 +36,16 @@ public class KnowledgeService implements KnowledgeApplicationService {
 
     @Override
     public List<KnowledgeSearchResponse> search(String keyword) {
+        String normalizedKeyword = QueryFilterSupport.trimToNull(keyword);
+        if (normalizedKeyword == null) {
+            return List.of();
+        }
         return knowledgeDocumentRepository.findAll()
                 .stream()
                 .filter(doc -> Boolean.TRUE.equals(doc.getPublished()))
-                .filter(doc -> containsIgnoreCase(doc.getTitle(), keyword)
-                        || containsIgnoreCase(doc.getCategory(), keyword)
-                        || containsIgnoreCase(doc.getContent(), keyword))
+                .filter(doc -> QueryFilterSupport.containsIgnoreCase(doc.getTitle(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(doc.getCategory(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(doc.getContent(), normalizedKeyword))
                 .map(this::toSafeSearchResponse)
                 .toList();
     }
@@ -51,7 +56,8 @@ public class KnowledgeService implements KnowledgeApplicationService {
                 new KnowledgeSearchResponse(101L, "在读证明模板", "模板下载", "/templates/study-certificate.docx", "标准在读证明模板下载", "STANDARD_ANSWER", false),
                 new KnowledgeSearchResponse(102L, "请假申请表", "模板下载", "/templates/leave-request.docx", "标准请假申请表模板下载", "STANDARD_ANSWER", false),
                 new KnowledgeSearchResponse(103L, "活动预算表", "模板下载", "/templates/activity-budget.xlsx", "活动预算表下载", "STANDARD_ANSWER", false),
-                new KnowledgeSearchResponse(104L, "知识库导入模板", "模板下载", "/templates/knowledge-import.xlsx", "管理员批量导入知识条目模板", "STANDARD_ANSWER", false)
+                new KnowledgeSearchResponse(104L, "党团事务材料模板", "模板下载", "/templates/party-materials.zip", "入党入团常用材料模板下载", "STANDARD_ANSWER", false),
+                new KnowledgeSearchResponse(105L, "知识库导入模板", "模板下载", "/templates/knowledge-import.xlsx", "管理员批量导入知识条目模板", "STANDARD_ANSWER", false)
         );
     }
 
@@ -110,7 +116,7 @@ public class KnowledgeService implements KnowledgeApplicationService {
                         .comparingInt((edu.ruc.platform.knowledge.domain.KnowledgeDocument doc) -> scoreRecommendation(doc, profile, notices, certificateStatuses, progress))
                         .reversed()
                         .thenComparing(edu.ruc.platform.knowledge.domain.KnowledgeDocument::getId))
-                .limit(3)
+                .limit(4)
                 .map(this::toSafeSearchResponse)
                 .toList();
     }
@@ -145,10 +151,6 @@ public class KnowledgeService implements KnowledgeApplicationService {
         return score;
     }
 
-    private boolean containsIgnoreCase(String source, String keyword) {
-        return source != null && keyword != null && source.toLowerCase().contains(keyword.toLowerCase());
-    }
-
     private KnowledgeSearchResponse toSafeSearchResponse(edu.ruc.platform.knowledge.domain.KnowledgeDocument doc) {
         return new KnowledgeSearchResponse(
                 doc.getId(),
@@ -174,8 +176,8 @@ public class KnowledgeService implements KnowledgeApplicationService {
 
     private boolean isOfficialLinkOnly(edu.ruc.platform.knowledge.domain.KnowledgeDocument doc) {
         return "数据安全".equals(doc.getCategory())
-                || containsIgnoreCase(doc.getTitle(), "保密")
-                || containsIgnoreCase(doc.getContent(), "严格控制");
+                || QueryFilterSupport.containsIgnoreCase(doc.getTitle(), "保密")
+                || QueryFilterSupport.containsIgnoreCase(doc.getContent(), "严格控制");
     }
 
     private String buildSafetyTip(edu.ruc.platform.knowledge.domain.KnowledgeDocument doc) {

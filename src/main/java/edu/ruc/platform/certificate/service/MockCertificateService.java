@@ -14,6 +14,7 @@ import edu.ruc.platform.auth.service.CurrentUserService;
 import edu.ruc.platform.common.api.PageResponse;
 import edu.ruc.platform.common.enums.RoleType;
 import edu.ruc.platform.common.exception.BusinessException;
+import edu.ruc.platform.common.support.QueryFilterSupport;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
@@ -249,16 +250,30 @@ public class MockCertificateService implements CertificateApplicationService {
     }
 
     private List<ApprovalTaskResponse> filterApprovalTasks(ApprovalTaskFilterRequest request) {
+        validateApprovalTaskFilter(request);
+        String normalizedStatus = QueryFilterSupport.normalizeUpper(request.status());
+        String normalizedCertificateType = normalizeCertificateType(request.certificateType());
+        String normalizedKeyword = QueryFilterSupport.trimToNull(request.keyword());
         return approvalTasks.stream()
                 .filter(item -> canAccessApprovalTask(currentUserService.requireCurrentUser(), item))
                 .filter(item -> request.studentId() == null || request.studentId().equals(item.studentId()))
-                .filter(item -> request.status() == null || request.status().isBlank() || request.status().equals(item.status()))
-                .filter(item -> request.certificateType() == null || request.certificateType().isBlank() || request.certificateType().equals(item.certificateType()))
-                .filter(item -> request.keyword() == null || request.keyword().isBlank()
-                        || item.studentName().contains(request.keyword())
-                        || item.reason().contains(request.keyword())
-                        || item.certificateType().contains(request.keyword()))
+                .filter(item -> normalizedStatus == null || normalizedStatus.equalsIgnoreCase(item.status()))
+                .filter(item -> normalizedCertificateType == null || normalizedCertificateType.equals(item.certificateType()))
+                .filter(item -> normalizedKeyword == null
+                        || QueryFilterSupport.containsIgnoreCase(item.studentName(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.reason(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.certificateType(), normalizedKeyword))
                 .toList();
+    }
+
+    private void validateApprovalTaskFilter(ApprovalTaskFilterRequest request) {
+        if (request == null) {
+            return;
+        }
+        QueryFilterSupport.requireEnumValue(edu.ruc.platform.common.enums.ApprovalStatus.class, request.status(), "审批状态不支持: ");
+        if (request.certificateType() != null && !request.certificateType().isBlank()) {
+            validateCertificateType(request.certificateType());
+        }
     }
 
     private ApprovalTaskResponse findTask(Long requestId) {

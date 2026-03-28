@@ -10,7 +10,9 @@ import edu.ruc.platform.common.api.PageResponse;
 import edu.ruc.platform.common.enums.RoleType;
 import edu.ruc.platform.notice.dto.TargetedNoticeResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
+@Validated
 @RequestMapping("/api/v1/admin/notices")
 @RequiredArgsConstructor
 public class AdminNoticeController {
@@ -38,8 +41,8 @@ public class AdminNoticeController {
     public ApiResponse<PageResponse<TargetedNoticeResponse>> page(@RequestParam(required = false) String keyword,
                                                                   @RequestParam(required = false) String tag,
                                                                   @RequestParam(required = false) String targetKeyword,
-                                                                  @RequestParam(defaultValue = "0") int page,
-                                                                  @RequestParam(defaultValue = "10") int size) {
+                                                                  @Min(value = 0, message = "page 不能小于 0") @RequestParam(defaultValue = "0") int page,
+                                                                  @Min(value = 1, message = "size 不能小于 1") @RequestParam(defaultValue = "10") int size) {
         currentUserService.requireAnyRole(RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR, RoleType.CLASS_ADVISOR);
         return ApiResponse.success(adminService.pageNotices(new AdminNoticeFilterRequest(keyword, tag, targetKeyword), page, size));
     }

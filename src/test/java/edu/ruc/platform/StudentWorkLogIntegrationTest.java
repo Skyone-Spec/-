@@ -135,6 +135,19 @@ class StudentWorkLogIntegrationTest {
     }
 
     @Test
+    void worklogSortingAcceptsTrimmedAndCaseInsensitiveDirection() throws Exception {
+        String token = login("advisor01", "123456");
+
+        mockMvc.perform(get("/api/v1/worklogs/admin/page")
+                        .param("className", "计科一班")
+                        .param("sortBy", " studentName ")
+                        .param("sortDir", " DESC ")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content").isArray());
+    }
+
+    @Test
     void leagueSecretaryCanUpdateDeleteAndTraceOwnWorklog() throws Exception {
         String leagueToken = login("2023100002", "123456");
         String advisorToken = login("advisor01", "123456");

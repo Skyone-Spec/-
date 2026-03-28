@@ -1,6 +1,7 @@
 package edu.ruc.platform.platform.service;
 
 import edu.ruc.platform.common.api.PageResponse;
+import edu.ruc.platform.common.support.QueryFilterSupport;
 import edu.ruc.platform.platform.domain.PlatformNotificationSendRecord;
 import edu.ruc.platform.platform.dto.PlatformNotificationSendRecordResponse;
 import edu.ruc.platform.platform.repository.PlatformNotificationSendRecordRepository;
@@ -28,10 +29,11 @@ public class DefaultPlatformNotificationSendRecordService implements PlatformNot
 
     @Override
     public PageResponse<PlatformNotificationSendRecordResponse> pageRecords(String channel, String status, String targetKeyword, int page, int size) {
+        String normalizedTargetKeyword = QueryFilterSupport.trimToNull(targetKeyword);
         List<PlatformNotificationSendRecordResponse> filtered = listRecords().stream()
                 .filter(item -> channel == null || channel.isBlank() || channel.equals(item.channel()))
                 .filter(item -> status == null || status.isBlank() || status.equals(item.status()))
-                .filter(item -> targetKeyword == null || targetKeyword.isBlank() || item.targetDescription().contains(targetKeyword))
+                .filter(item -> normalizedTargetKeyword == null || QueryFilterSupport.containsIgnoreCase(item.targetDescription(), normalizedTargetKeyword))
                 .toList();
         return toPage(filtered, page, size);
     }

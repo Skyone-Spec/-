@@ -14,7 +14,10 @@ import edu.ruc.platform.common.api.ApiResponse;
 import edu.ruc.platform.common.api.PageResponse;
 import edu.ruc.platform.common.enums.RoleType;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
+@Validated
 @RequestMapping("/api/v1/admin/import-tasks")
 @RequiredArgsConstructor
 public class AdminImportTaskController {
@@ -44,8 +48,8 @@ public class AdminImportTaskController {
     public ApiResponse<PageResponse<DataImportTaskResponse>> page(@RequestParam(required = false) String taskType,
                                                                   @RequestParam(required = false) String status,
                                                                   @RequestParam(required = false) String ownerKeyword,
-                                                                  @RequestParam(defaultValue = "0") int page,
-                                                                  @RequestParam(defaultValue = "10") int size) {
+                                                                  @Min(value = 0, message = "page 不能小于 0") @RequestParam(defaultValue = "0") int page,
+                                                                  @Min(value = 1, message = "size 不能小于 1") @RequestParam(defaultValue = "10") int size) {
         currentUserService.requireAnyRole(RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
         return ApiResponse.success(adminService.pageImportTasks(new DataImportTaskFilterRequest(taskType, status, ownerKeyword), page, size));
     }
@@ -65,31 +69,31 @@ public class AdminImportTaskController {
     }
 
     @PutMapping("/{id}")
-    public ApiResponse<DataImportTaskResponse> update(@PathVariable Long id,
+    public ApiResponse<DataImportTaskResponse> update(@Positive(message = "导入任务ID必须大于 0") @PathVariable Long id,
                                                       @Valid @RequestBody DataImportTaskUpdateRequest request) {
         currentUserService.requireAnyRole(RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
         return ApiResponse.success("导入任务已更新", adminService.updateImportTask(id, request));
     }
 
     @GetMapping("/{id}/errors")
-    public ApiResponse<List<DataImportErrorItemResponse>> listErrors(@PathVariable Long id) {
+    public ApiResponse<List<DataImportErrorItemResponse>> listErrors(@Positive(message = "导入任务ID必须大于 0") @PathVariable Long id) {
         currentUserService.requireAnyRole(RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
         return ApiResponse.success(adminService.listImportErrors(id));
     }
 
     @GetMapping("/{id}/errors/page")
-    public ApiResponse<PageResponse<DataImportErrorItemResponse>> pageErrors(@PathVariable Long id,
-                                                                             @RequestParam(required = false) Integer rowNumber,
+    public ApiResponse<PageResponse<DataImportErrorItemResponse>> pageErrors(@Positive(message = "导入任务ID必须大于 0") @PathVariable Long id,
+                                                                             @Min(value = 1, message = "rowNumber 必须大于 0") @RequestParam(required = false) Integer rowNumber,
                                                                              @RequestParam(required = false) String fieldName,
                                                                              @RequestParam(required = false) String keyword,
-                                                                             @RequestParam(defaultValue = "0") int page,
-                                                                             @RequestParam(defaultValue = "10") int size) {
+                                                                             @Min(value = 0, message = "page 不能小于 0") @RequestParam(defaultValue = "0") int page,
+                                                                             @Min(value = 1, message = "size 不能小于 1") @RequestParam(defaultValue = "10") int size) {
         currentUserService.requireAnyRole(RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
         return ApiResponse.success(adminService.pageImportErrors(id, new DataImportErrorFilterRequest(rowNumber, fieldName, keyword), page, size));
     }
 
     @PostMapping("/{id}/errors")
-    public ApiResponse<DataImportErrorItemResponse> createError(@PathVariable Long id,
+    public ApiResponse<DataImportErrorItemResponse> createError(@Positive(message = "导入任务ID必须大于 0") @PathVariable Long id,
                                                                 @Valid @RequestBody DataImportErrorItemCreateRequest request) {
         currentUserService.requireAnyRole(RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
         return ApiResponse.success("导入错误明细已登记", adminService.createImportError(id, request));

@@ -5,6 +5,7 @@ import edu.ruc.platform.auth.service.CurrentUserService;
 import edu.ruc.platform.common.api.PageResponse;
 import edu.ruc.platform.common.enums.RoleType;
 import edu.ruc.platform.common.exception.BusinessException;
+import edu.ruc.platform.common.support.QueryFilterSupport;
 import edu.ruc.platform.student.dto.StudentProfileResponse;
 import edu.ruc.platform.student.dto.StudentPortraitCareerStatsResponse;
 import edu.ruc.platform.student.dto.StudentPortraitFilterRequest;
@@ -63,9 +64,11 @@ public class MockStudentProfileService implements StudentProfileApplicationServi
     @Override
     public List<StudentProfileResponse> listStudentsByScope(String grade, String className) {
         AuthenticatedUser user = currentUserService.requireCurrentUser();
+        String normalizedGrade = QueryFilterSupport.trimToNull(grade);
+        String normalizedClassName = QueryFilterSupport.trimToNull(className);
         return students.stream()
-                .filter(item -> grade == null || grade.isBlank() || grade.equals(item.grade()))
-                .filter(item -> className == null || className.isBlank() || className.equals(item.className()))
+                .filter(item -> normalizedGrade == null || normalizedGrade.equals(item.grade()))
+                .filter(item -> normalizedClassName == null || normalizedClassName.equals(item.className()))
                 .filter(item -> canAccessStudent(user, item))
                 .map(item -> maskForRole(item, user))
                 .toList();
@@ -559,6 +562,9 @@ public class MockStudentProfileService implements StudentProfileApplicationServi
 
     private List<StudentPortraitPageItemResponse> filterPortraits(StudentPortraitFilterRequest request) {
         AuthenticatedUser user = currentUserService.requireCurrentUser();
+        String normalizedGrade = QueryFilterSupport.trimToNull(request.grade());
+        String normalizedClassName = QueryFilterSupport.trimToNull(request.className());
+        String normalizedCareerOrientation = QueryFilterSupport.trimToNull(request.careerOrientation());
         return students.stream()
                 .filter(item -> canAccessStudent(user, item))
                 .map(profile -> {
@@ -585,27 +591,46 @@ public class MockStudentProfileService implements StudentProfileApplicationServi
                     );
                 })
                 .filter(java.util.Objects::nonNull)
-                .filter(item -> request.grade() == null || request.grade().isBlank() || request.grade().equals(item.grade()))
-                .filter(item -> request.className() == null || request.className().isBlank() || request.className().equals(item.className()))
+                .filter(item -> normalizedGrade == null || normalizedGrade.equals(item.grade()))
+                .filter(item -> normalizedClassName == null || normalizedClassName.equals(item.className()))
                 .filter(item -> request.publicVisible() == null || request.publicVisible().equals(item.publicVisible()))
-                .filter(item -> request.careerOrientation() == null || request.careerOrientation().isBlank() || request.careerOrientation().equals(item.careerOrientation()))
+                .filter(item -> normalizedCareerOrientation == null || normalizedCareerOrientation.equals(item.careerOrientation()))
                 .filter(item -> request.minGpa() == null || (item.gpa() != null && item.gpa() >= request.minGpa()))
                 .toList();
     }
 
     private List<StudentProfileResponse> filterStudents(StudentProfileFilterRequest request) {
         AuthenticatedUser user = currentUserService.requireCurrentUser();
+        validateStudentFilterRequest(request);
+        String normalizedGrade = QueryFilterSupport.trimToNull(request.grade());
+        String normalizedClassName = QueryFilterSupport.trimToNull(request.className());
+        String normalizedStatus = QueryFilterSupport.normalizeUpper(request.status());
+        String normalizedKeyword = QueryFilterSupport.trimToNull(request.keyword());
         return students.stream()
                 .filter(item -> canAccessStudent(user, item))
-                .filter(item -> request.grade() == null || request.grade().isBlank() || request.grade().equals(item.grade()))
-                .filter(item -> request.className() == null || request.className().isBlank() || request.className().equals(item.className()))
-                .filter(item -> request.status() == null || request.status().isBlank() || request.status().equals(item.status()))
-                .filter(item -> request.keyword() == null || request.keyword().isBlank()
-                        || item.name().contains(request.keyword())
-                        || item.studentNo().contains(request.keyword())
-                        || (item.major() != null && item.major().contains(request.keyword())))
+                .filter(item -> normalizedGrade == null || normalizedGrade.equals(item.grade()))
+                .filter(item -> normalizedClassName == null || normalizedClassName.equals(item.className()))
+                .filter(item -> normalizedStatus == null || normalizedStatus.equals(item.status()))
+                .filter(item -> normalizedKeyword == null
+                        || QueryFilterSupport.containsIgnoreCase(item.name(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.studentNo(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.major(), normalizedKeyword))
                 .map(item -> maskForRole(item, user))
                 .toList();
+    }
+
+    private void validateStudentFilterRequest(StudentProfileFilterRequest request) {
+        if (request == null) {
+            return;
+        }
+        String normalizedStatus = QueryFilterSupport.normalizeUpper(request.status());
+        if (normalizedStatus == null) {
+            return;
+        }
+        List<String> allowedStatuses = List.of("ACTIVE", "SUSPENDED", "GRADUATED", "TRANSFERRED", "WITHDRAWN");
+        if (!allowedStatuses.contains(normalizedStatus)) {
+            throw new BusinessException("学生状态仅支持 ACTIVE、SUSPENDED、GRADUATED、TRANSFERRED、WITHDRAWN");
+        }
     }
 
     private String resolveGpaBand(Double gpa) {

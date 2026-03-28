@@ -5,6 +5,7 @@ import edu.ruc.platform.auth.service.CurrentUserService;
 import edu.ruc.platform.auth.service.StudentDataScopeService;
 import edu.ruc.platform.common.api.PageResponse;
 import edu.ruc.platform.common.exception.BusinessException;
+import edu.ruc.platform.common.support.QueryFilterSupport;
 import edu.ruc.platform.student.domain.StudentProfile;
 import edu.ruc.platform.student.domain.StudentPortrait;
 import edu.ruc.platform.student.domain.StudentStatusHistory;
@@ -56,9 +57,11 @@ public class StudentProfileService implements StudentProfileApplicationService {
     @Override
     public List<StudentProfileResponse> listStudentsByScope(String grade, String className) {
         AuthenticatedUser user = currentUserService.requireCurrentUser();
+        String normalizedGrade = QueryFilterSupport.trimToNull(grade);
+        String normalizedClassName = QueryFilterSupport.trimToNull(className);
         return studentProfileRepository.findAll().stream()
-                .filter(item -> grade == null || grade.isBlank() || grade.equals(item.getGrade()))
-                .filter(item -> className == null || className.isBlank() || className.equals(item.getClassName()))
+                .filter(item -> normalizedGrade == null || normalizedGrade.equals(item.getGrade()))
+                .filter(item -> normalizedClassName == null || normalizedClassName.equals(item.getClassName()))
                 .filter(item -> canAccessStudent(user, item))
                 .map(item -> toResponse(item, user))
                 .toList();
@@ -111,6 +114,7 @@ public class StudentProfileService implements StudentProfileApplicationService {
 
     @Override
     public StudentProfileResponse createStudent(StudentProfileUpsertRequest request) {
+        validateStudentRequest(request);
         StudentProfile entity = new StudentProfile();
         populateEntity(entity, request);
         StudentProfile saved = studentProfileRepository.save(entity);
@@ -120,6 +124,7 @@ public class StudentProfileService implements StudentProfileApplicationService {
 
     @Override
     public StudentProfileResponse updateStudent(Long id, StudentProfileUpsertRequest request) {
+        validateStudentRequest(request);
         StudentProfile entity = studentProfileRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("学生不存在"));
         String originalStatus = entity.getStatus();
@@ -145,6 +150,7 @@ public class StudentProfileService implements StudentProfileApplicationService {
 
     @Override
     public StudentStatusHistoryResponse createStatusHistory(Long studentId, StudentStatusHistoryCreateRequest request) {
+        validateStatus(request.status(), request.changedToMajor());
         StudentProfile entity = studentProfileRepository.findById(studentId)
                 .orElseThrow(() -> new BusinessException("学生不存在"));
         String fromStatus = entity.getStatus();
@@ -172,6 +178,7 @@ public class StudentProfileService implements StudentProfileApplicationService {
 
     @Override
     public StudentPortraitResponse upsertPortrait(Long studentId, StudentPortraitUpsertRequest request) {
+        validatePortraitRequest(request);
         StudentPortrait portrait = studentPortraitRepository.findByStudentId(studentId).orElseGet(StudentPortrait::new);
         portrait.setStudentId(studentId);
         portrait.setGender(request.gender());
@@ -266,6 +273,64 @@ public class StudentProfileService implements StudentProfileApplicationService {
         entity.setEncryptedNativePlace(request.encryptedNativePlace());
         entity.setEncryptedHouseholdAddress(request.encryptedHouseholdAddress());
         entity.setEncryptedSupervisor(request.encryptedSupervisor());
+    }
+
+    private void validateStudentRequest(StudentProfileUpsertRequest request) {
+        validateStatus(request.status(), request.majorChangedTo());
+        if (Boolean.TRUE.equals(request.graduated()) && !"GRADUATED".equals(request.status())) {
+            throw new BusinessException("毕业状态为 true 时学生状态必须为 GRADUATED");
+        }
+        if (Boolean.FALSE.equals(request.graduated()) && "GRADUATED".equals(request.status())) {
+            throw new BusinessException("学生状态为 GRADUATED 时毕业状态必须为 true");
+        }
+        validateEncryptedSensitiveField("encryptedIdCardNo", request.encryptedIdCardNo(), "(^\\d{15}$)|(^\\d{17}[0-9Xx]$)", "身份证号");
+        validateEncryptedSensitiveField("encryptedPhone", request.encryptedPhone(), "^1\\d{10}$", "手机号");
+    }
+
+    private void validateStatus(String status, String changedToMajor) {
+        if (status == null || status.isBlank()) {
+            throw new BusinessException("学生状态不能为空");
+        }
+        List<String> allowedStatuses = List.of("ACTIVE", "SUSPENDED", "GRADUATED", "TRANSFERRED", "WITHDRAWN");
+        if (!allowedStatuses.contains(status)) {
+            throw new BusinessException("学生状态仅支持 ACTIVE、SUSPENDED、GRADUATED、TRANSFERRED、WITHDRAWN");
+        }
+        if ((status.equals("TRANSFERRED") || status.equals("WITHDRAWN"))
+                && (changedToMajor == null || changedToMajor.isBlank())) {
+            throw new BusinessException("转专业或转出状态必须填写变更后专业");
+        }
+    }
+
+    private void validatePortraitRequest(StudentPortraitUpsertRequest request) {
+        if (request.gpa() != null && (request.gpa() < 0 || request.gpa() > 4.5)) {
+            throw new BusinessException("学生画像 GPA 必须在 0 到 4.5 之间");
+        }
+        if (request.gradeRank() != null && request.gradeRank() <= 0) {
+            throw new BusinessException("年级排名必须大于 0");
+        }
+        if (request.majorRank() != null && request.majorRank() <= 0) {
+            throw new BusinessException("专业排名必须大于 0");
+        }
+        if (request.creditsEarned() != null && request.creditsEarned() < 0) {
+            throw new BusinessException("已修学分不能小于 0");
+        }
+        if (request.updatedBy() == null || request.updatedBy().isBlank()) {
+            AuthenticatedUser currentUser = currentUserService.requireCurrentUser();
+            if ("SUPER_ADMIN".equals(currentUser.role())
+                    || "COLLEGE_ADMIN".equals(currentUser.role())
+                    || "COUNSELOR".equals(currentUser.role())) {
+                throw new BusinessException("维护人不能为空");
+            }
+        }
+    }
+
+    private void validateEncryptedSensitiveField(String fieldName, String value, String plainTextPattern, String label) {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+        if (value.matches(plainTextPattern)) {
+            throw new BusinessException(fieldName + " 不能直接提交明文" + label + "，请传入加密后内容");
+        }
     }
 
     private StudentProfileResponse toResponse(StudentProfile entity, AuthenticatedUser user) {
@@ -447,16 +512,19 @@ public class StudentProfileService implements StudentProfileApplicationService {
 
     private List<StudentPortraitPageItemResponse> filterPortraits(StudentPortraitFilterRequest request) {
         AuthenticatedUser user = currentUserService.requireCurrentUser();
+        String normalizedGrade = QueryFilterSupport.trimToNull(request.grade());
+        String normalizedClassName = QueryFilterSupport.trimToNull(request.className());
+        String normalizedCareerOrientation = QueryFilterSupport.trimToNull(request.careerOrientation());
         java.util.Map<Long, StudentPortrait> portraitMap = studentPortraitRepository.findAll().stream()
                 .collect(java.util.stream.Collectors.toMap(StudentPortrait::getStudentId, java.util.function.Function.identity()));
         return studentProfileRepository.findAll().stream()
                 .filter(profile -> canAccessStudent(user, profile))
                 .map(profile -> toPortraitPageItem(profile, portraitMap.get(profile.getId())))
                 .filter(item -> item != null)
-                .filter(item -> request.grade() == null || request.grade().isBlank() || request.grade().equals(item.grade()))
-                .filter(item -> request.className() == null || request.className().isBlank() || request.className().equals(item.className()))
+                .filter(item -> normalizedGrade == null || normalizedGrade.equals(item.grade()))
+                .filter(item -> normalizedClassName == null || normalizedClassName.equals(item.className()))
                 .filter(item -> request.publicVisible() == null || request.publicVisible().equals(item.publicVisible()))
-                .filter(item -> request.careerOrientation() == null || request.careerOrientation().isBlank() || request.careerOrientation().equals(item.careerOrientation()))
+                .filter(item -> normalizedCareerOrientation == null || normalizedCareerOrientation.equals(item.careerOrientation()))
                 .filter(item -> request.minGpa() == null || (item.gpa() != null && item.gpa() >= request.minGpa()))
                 .toList();
     }
@@ -535,17 +603,36 @@ public class StudentProfileService implements StudentProfileApplicationService {
 
     private List<StudentProfileResponse> filterStudents(StudentProfileFilterRequest request) {
         AuthenticatedUser user = currentUserService.requireCurrentUser();
+        validateStudentFilterRequest(request);
+        String normalizedGrade = QueryFilterSupport.trimToNull(request.grade());
+        String normalizedClassName = QueryFilterSupport.trimToNull(request.className());
+        String normalizedStatus = QueryFilterSupport.normalizeUpper(request.status());
+        String normalizedKeyword = QueryFilterSupport.trimToNull(request.keyword());
         return studentProfileRepository.findAll().stream()
                 .filter(item -> canAccessStudent(user, item))
-                .filter(item -> request.grade() == null || request.grade().isBlank() || request.grade().equals(item.getGrade()))
-                .filter(item -> request.className() == null || request.className().isBlank() || request.className().equals(item.getClassName()))
-                .filter(item -> request.status() == null || request.status().isBlank() || request.status().equals(item.getStatus()))
-                .filter(item -> request.keyword() == null || request.keyword().isBlank()
-                        || item.getName().contains(request.keyword())
-                        || item.getStudentNo().contains(request.keyword())
-                        || (item.getMajor() != null && item.getMajor().contains(request.keyword())))
+                .filter(item -> normalizedGrade == null || normalizedGrade.equals(item.getGrade()))
+                .filter(item -> normalizedClassName == null || normalizedClassName.equals(item.getClassName()))
+                .filter(item -> normalizedStatus == null || normalizedStatus.equals(item.getStatus()))
+                .filter(item -> normalizedKeyword == null
+                        || QueryFilterSupport.containsIgnoreCase(item.getName(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.getStudentNo(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.getMajor(), normalizedKeyword))
                 .map(item -> toResponse(item, user))
                 .toList();
+    }
+
+    private void validateStudentFilterRequest(StudentProfileFilterRequest request) {
+        if (request == null) {
+            return;
+        }
+        String normalizedStatus = QueryFilterSupport.normalizeUpper(request.status());
+        if (normalizedStatus == null) {
+            return;
+        }
+        List<String> allowedStatuses = List.of("ACTIVE", "SUSPENDED", "GRADUATED", "TRANSFERRED", "WITHDRAWN");
+        if (!allowedStatuses.contains(normalizedStatus)) {
+            throw new BusinessException("学生状态仅支持 ACTIVE、SUSPENDED、GRADUATED、TRANSFERRED、WITHDRAWN");
+        }
     }
 
     private StudentPortrait enforcePortraitAccess(AuthenticatedUser user, StudentProfile profile, StudentPortrait portrait) {

@@ -34,6 +34,7 @@ import edu.ruc.platform.common.enums.RoleType;
 import edu.ruc.platform.common.enums.StudentActionType;
 import edu.ruc.platform.common.enums.StudentActionPriority;
 import edu.ruc.platform.common.exception.BusinessException;
+import edu.ruc.platform.common.support.QueryFilterSupport;
 import edu.ruc.platform.platform.dto.PlatformContractResponse;
 import edu.ruc.platform.platform.dto.PlatformFileUploadResponse;
 import edu.ruc.platform.platform.dto.PlatformFileUploadRecordResponse;
@@ -231,14 +232,16 @@ public class PlatformService implements PlatformApplicationService {
 
     @Override
     public List<PlatformUserResponse> listUsers(String role, Boolean enabled, String keyword) {
+        String normalizedRole = validateUserRoleFilter(role);
+        String normalizedKeyword = QueryFilterSupport.trimToNull(keyword);
         return userAccountRepository.findAll().stream()
-                .filter(item -> role == null || role.isBlank() || role.equals(item.getRole().name()))
+                .filter(item -> normalizedRole == null || normalizedRole.equals(item.getRole().name()))
                 .filter(item -> enabled == null || enabled.equals(item.getEnabled()))
                 .map(this::toPlatformUser)
-                .filter(item -> keyword == null || keyword.isBlank()
-                        || item.username().contains(keyword)
-                        || (item.name() != null && item.name().contains(keyword))
-                        || (item.studentNo() != null && item.studentNo().contains(keyword)))
+                .filter(item -> normalizedKeyword == null
+                        || QueryFilterSupport.containsIgnoreCase(item.username(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.name(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.studentNo(), normalizedKeyword))
                 .toList();
     }
 
@@ -254,6 +257,7 @@ public class PlatformService implements PlatformApplicationService {
         userAccountRepository.findByUsername(request.username()).ifPresent(item -> {
             throw new BusinessException("用户名已存在");
         });
+        validateUserUpsertRequest(request, true);
         UserAccount user = new UserAccount();
         user.setUsername(request.username());
         user.setRole(parseRole(request.role()));
@@ -278,6 +282,7 @@ public class PlatformService implements PlatformApplicationService {
                 .ifPresent(existing -> {
                     throw new BusinessException("用户名已存在");
                 });
+        validateUserUpsertRequest(request, false);
         user.setUsername(request.username());
         user.setRole(parseRole(request.role()));
         if (request.enabled() != null) {
@@ -311,6 +316,7 @@ public class PlatformService implements PlatformApplicationService {
         String password = request == null || request.newPassword() == null || request.newPassword().isBlank()
                 ? platformSecurityPolicyService.defaultPassword()
                 : request.newPassword();
+        validatePassword(password, "重置密码长度不能少于 6 位");
         user.setPasswordHash(passwordEncoder.encode(password));
         userAccountRepository.save(user);
         writePlatformOperationLog("PLATFORM_USER", "RESET_PASSWORD", "user#" + user.getId(), "SUCCESS", user.getUsername());
@@ -336,6 +342,7 @@ public class PlatformService implements PlatformApplicationService {
 
     @Override
     public PlatformUserStatsResponse userStats(String role, Boolean enabled, String keyword) {
+        validateUserRoleFilter(role);
         List<PlatformUserResponse> filtered = listUsers(role, enabled, keyword);
         List<PlatformUserRoleStatsResponse> roleStats = filtered.stream()
                 .collect(java.util.stream.Collectors.groupingBy(PlatformUserResponse::role))
@@ -356,12 +363,13 @@ public class PlatformService implements PlatformApplicationService {
 
     @Override
     public PageResponse<PlatformSessionResponse> pageSessions(Long userId, Boolean active, String keyword, int page, int size) {
+        String normalizedKeyword = QueryFilterSupport.trimToNull(keyword);
         List<PlatformSessionResponse> filtered = userSessionRecordRepository.findAll().stream()
                 .filter(item -> userId == null || userId.equals(item.getUserId()))
                 .filter(item -> active == null || active.equals(item.getActive()))
-                .filter(item -> keyword == null || keyword.isBlank()
-                        || item.getUsername().contains(keyword)
-                        || item.getRole().contains(keyword))
+                .filter(item -> normalizedKeyword == null
+                        || QueryFilterSupport.containsIgnoreCase(item.getUsername(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.getRole(), normalizedKeyword))
                 .sorted(java.util.Comparator.comparing(UserSessionRecord::getLoginAt).reversed())
                 .map(item -> new PlatformSessionResponse(
                         item.getId(),
@@ -463,10 +471,13 @@ public class PlatformService implements PlatformApplicationService {
 
     @Override
     public PageResponse<PlatformFileUploadRecordResponse> pageUploadRecords(String bizType, Long bizId, String uploaderKeyword, int page, int size) {
+        String normalizedBizType = QueryFilterSupport.normalizeUpper(bizType);
+        String normalizedUploaderKeyword = QueryFilterSupport.trimToNull(uploaderKeyword);
         List<PlatformFileUploadRecordResponse> filtered = platformFileUploadRecordRepository.findAll().stream()
-                .filter(item -> bizType == null || bizType.isBlank() || bizType.equals(item.getBizType()))
+                .filter(item -> normalizedBizType == null || normalizedBizType.equalsIgnoreCase(item.getBizType()))
                 .filter(item -> bizId == null || bizId.equals(item.getBizId()))
-                .filter(item -> uploaderKeyword == null || uploaderKeyword.isBlank() || item.getUploadedBy().contains(uploaderKeyword))
+                .filter(item -> normalizedUploaderKeyword == null
+                        || QueryFilterSupport.containsIgnoreCase(item.getUploadedBy(), normalizedUploaderKeyword))
                 .filter(item -> !Boolean.TRUE.equals(item.getDeleted()))
                 .sorted(java.util.Comparator.comparing(PlatformFileUploadRecord::getCreatedAt).reversed())
                 .map(item -> new PlatformFileUploadRecordResponse(
@@ -523,6 +534,7 @@ public class PlatformService implements PlatformApplicationService {
     @Override
     public PlatformImportTaskReceiptResponse createImportTask(PlatformImportTaskCreateRequest request) {
         AuthenticatedUser currentUser = currentUserService.requireCurrentUser();
+        validateImportTaskCreateRequest(request.taskType(), request.fileName());
         DataImportTaskResponse task = adminService.createImportTask(new edu.ruc.platform.admin.dto.DataImportTaskCreateRequest(
                 request.taskType(),
                 request.fileName(),
@@ -536,6 +548,7 @@ public class PlatformService implements PlatformApplicationService {
     @Override
     public PlatformImportTaskReceiptResponse updateImportTask(Long taskId, PlatformImportTaskUpdateRequest request) {
         requireImportTaskMaintenancePermission(taskId);
+        validateImportTaskUpdatePayload(taskId, request);
         DataImportTaskResponse task = adminService.updateImportTask(taskId, new edu.ruc.platform.admin.dto.DataImportTaskUpdateRequest(
                 request.status(),
                 request.successRows(),
@@ -548,7 +561,8 @@ public class PlatformService implements PlatformApplicationService {
 
     @Override
     public PageResponse<DataImportTaskResponse> pageImportTasks(String taskType, String status, String ownerKeyword, int page, int size) {
-        return adminService.pageImportTasks(new DataImportTaskFilterRequest(taskType, status, ownerKeyword), page, size);
+        String normalizedStatus = validateImportTaskStatusFilter(status);
+        return adminService.pageImportTasks(new DataImportTaskFilterRequest(taskType, normalizedStatus, ownerKeyword), page, size);
     }
 
     @Override
@@ -586,12 +600,15 @@ public class PlatformService implements PlatformApplicationService {
 
     @Override
     public PageResponse<PlatformLoginAuditLogResponse> pageLoginAuditLogs(String action, String result, String keyword, int page, int size) {
+        String normalizedAction = QueryFilterSupport.normalizeUpper(action);
+        String normalizedResult = QueryFilterSupport.normalizeUpper(result);
+        String normalizedKeyword = QueryFilterSupport.trimToNull(keyword);
         List<PlatformLoginAuditLogResponse> filtered = loginAuditLogRepository.findAll().stream()
-                .filter(item -> action == null || action.isBlank() || action.equals(item.getAction()))
-                .filter(item -> result == null || result.isBlank() || result.equals(item.getResult()))
-                .filter(item -> keyword == null || keyword.isBlank()
-                        || item.getUsername().contains(keyword)
-                        || (item.getDetail() != null && item.getDetail().contains(keyword)))
+                .filter(item -> normalizedAction == null || normalizedAction.equalsIgnoreCase(item.getAction()))
+                .filter(item -> normalizedResult == null || normalizedResult.equalsIgnoreCase(item.getResult()))
+                .filter(item -> normalizedKeyword == null
+                        || QueryFilterSupport.containsIgnoreCase(item.getUsername(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.getDetail(), normalizedKeyword))
                 .sorted(java.util.Comparator.comparing(LoginAuditLog::getCreatedAt).reversed())
                 .map(item -> new PlatformLoginAuditLogResponse(
                         item.getId(),
@@ -615,6 +632,7 @@ public class PlatformService implements PlatformApplicationService {
     @Override
     public PlatformNotificationSendRecordResponse sendNotification(PlatformNotificationSendRequest request) {
         AuthenticatedUser operator = currentUserService.requireCurrentUser();
+        validateNotificationRequest(request);
         PlatformNotificationSendRecordResponse response = platformNotificationSendRecordService.recordSend(
                 request.title(),
                 request.channel(),
@@ -638,7 +656,9 @@ public class PlatformService implements PlatformApplicationService {
 
     @Override
     public PageResponse<PlatformNotificationSendRecordResponse> pageNotificationSendRecords(String channel, String status, String targetKeyword, int page, int size) {
-        return platformNotificationSendRecordService.pageRecords(channel, status, targetKeyword, page, size);
+        String normalizedChannel = validateNotificationChannelFilter(channel);
+        String normalizedStatus = validateNotificationStatusFilter(status);
+        return platformNotificationSendRecordService.pageRecords(normalizedChannel, normalizedStatus, targetKeyword, page, size);
     }
 
     private PlatformStudentQueryResponse toPlatformStudent(StudentProfileResponse item) {
@@ -715,14 +735,109 @@ public class PlatformService implements PlatformApplicationService {
 
     private RoleType parseRole(String role) {
         try {
-            return RoleType.valueOf(role.trim().toUpperCase());
+            return RoleType.valueOf(QueryFilterSupport.normalizeUpper(role));
         } catch (Exception ex) {
             throw new BusinessException("角色不存在: " + role);
         }
     }
 
+    private String validateUserRoleFilter(String role) {
+        return QueryFilterSupport.requireEnumValue(RoleType.class, role, "角色不存在: ");
+    }
+
+    private void validateUserUpsertRequest(PlatformUserUpsertRequest request, boolean creating) {
+        if (!request.username().equals(request.username().trim())) {
+            throw new BusinessException("用户名首尾不能包含空格");
+        }
+        if (request.username().contains(" ")) {
+            throw new BusinessException("用户名不能包含空格");
+        }
+        if (creating) {
+            validatePassword(resolvePassword(request.rawPassword()), "平台用户密码长度不能少于 6 位");
+        } else if (request.rawPassword() != null && !request.rawPassword().isBlank()) {
+            validatePassword(request.rawPassword(), "平台用户密码长度不能少于 6 位");
+        }
+    }
+
     private String resolvePassword(String rawPassword) {
         return rawPassword == null || rawPassword.isBlank() ? platformSecurityPolicyService.defaultPassword() : rawPassword;
+    }
+
+    private void validatePassword(String password, String message) {
+        if (password != null && !password.isBlank() && password.length() < 6) {
+            throw new BusinessException(message);
+        }
+    }
+
+    private void validateImportTaskCreateRequest(String taskType, String fileName) {
+        List<String> allowedTaskTypes = List.of("STUDENT_PROFILE", "KNOWLEDGE_BASE", "NOTICE", "ADVISOR_SCOPE");
+        if (!allowedTaskTypes.contains(taskType)) {
+            throw new BusinessException("导入任务类型仅支持 STUDENT_PROFILE、KNOWLEDGE_BASE、NOTICE、ADVISOR_SCOPE");
+        }
+        String lowerCaseFileName = fileName.toLowerCase(java.util.Locale.ROOT);
+        if (!(lowerCaseFileName.endsWith(".xlsx") || lowerCaseFileName.endsWith(".xls") || lowerCaseFileName.endsWith(".csv"))) {
+            throw new BusinessException("导入文件仅支持 xlsx、xls、csv");
+        }
+    }
+
+    private String validateImportTaskStatusFilter(String status) {
+        String normalizedStatus = QueryFilterSupport.normalizeUpper(status);
+        if (normalizedStatus == null) {
+            return null;
+        }
+        DataImportTaskStatus.from(normalizedStatus);
+        return normalizedStatus;
+    }
+
+    private void validateImportTaskUpdatePayload(Long taskId, PlatformImportTaskUpdateRequest request) {
+        DataImportTaskResponse current = adminService.listImportTasks().stream()
+                .filter(item -> item.id().equals(taskId))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("导入任务不存在"));
+        String nextStatus = DataImportTaskStatus.from(request.status()).name();
+        if (request.successRows() + request.failedRows() > current.totalRows()) {
+            throw new BusinessException("成功行数与失败行数之和不能超过总行数");
+        }
+        if (DataImportTaskStatus.SUCCESS.name().equals(current.status()) || DataImportTaskStatus.FAILED.name().equals(current.status())) {
+            throw new BusinessException("已完成的导入任务不允许再次更新状态");
+        }
+        if (DataImportTaskStatus.CREATED.name().equals(current.status()) && DataImportTaskStatus.CREATED.name().equals(nextStatus)
+                && (request.successRows() > 0 || request.failedRows() > 0)) {
+            throw new BusinessException("CREATED 状态下成功行数和失败行数必须为 0");
+        }
+        if (DataImportTaskStatus.SUCCESS.name().equals(nextStatus) && request.successRows() != current.totalRows()) {
+            throw new BusinessException("SUCCESS 状态下成功行数必须等于总行数");
+        }
+        if (DataImportTaskStatus.SUCCESS.name().equals(nextStatus) && request.failedRows() != 0) {
+            throw new BusinessException("SUCCESS 状态下失败行数必须为 0");
+        }
+        if (DataImportTaskStatus.PARTIAL_SUCCESS.name().equals(nextStatus) && (request.successRows() <= 0 || request.failedRows() <= 0)) {
+            throw new BusinessException("PARTIAL_SUCCESS 状态下成功行数和失败行数都必须大于 0");
+        }
+        if (DataImportTaskStatus.FAILED.name().equals(nextStatus) && request.successRows() != 0) {
+            throw new BusinessException("FAILED 状态下成功行数必须为 0");
+        }
+    }
+
+    private void validateNotificationRequest(PlatformNotificationSendRequest request) {
+        if (request.extensionChannels() == null || request.extensionChannels().isEmpty()) {
+            return;
+        }
+        long distinctCount = request.extensionChannels().stream().distinct().count();
+        if (distinctCount != request.extensionChannels().size()) {
+            throw new BusinessException("扩展渠道不能重复");
+        }
+        if (request.extensionChannels().stream().anyMatch(channel -> channel.equals(request.channel()))) {
+            throw new BusinessException("扩展渠道不能与主发送渠道重复");
+        }
+    }
+
+    private String validateNotificationChannelFilter(String channel) {
+        return QueryFilterSupport.requireEnumValue(NotificationChannelType.class, channel, "通知渠道不支持: ");
+    }
+
+    private String validateNotificationStatusFilter(String status) {
+        return QueryFilterSupport.requireEnumValue(NotificationSendStatus.class, status, "通知发送状态不支持: ");
     }
 
     private String buildSecurityPolicyAuditDetail(PlatformSecurityPolicyResponse before, PlatformSecurityPolicyResponse after) {

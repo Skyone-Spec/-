@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -175,7 +176,7 @@ class ErrorFlowIntegrationTest {
                                 {
                                   "gender": "男",
                                   "gpa": 5.2,
-                                  "gradeRank": 0,
+                                  "gradeRank": 1,
                                   "majorRank": 1,
                                   "creditsEarned": 100,
                                   "careerOrientation": "升学",
@@ -186,7 +187,328 @@ class ErrorFlowIntegrationTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.message").value("学生画像 GPA 必须在 0 到 4.5 之间"));
+                .andExpect(jsonPath("$.message", containsString("学生画像 GPA 必须在 0 到 4.5 之间")));
+    }
+
+    @Test
+    void platformAndAdminPagingRejectInvalidPageParams() throws Exception {
+        String token = loginAndExtractToken("admin", "123456");
+
+        mockMvc.perform(get("/api/v1/platform/users/page")
+                        .header("Authorization", "Bearer " + token)
+                        .param("page", "-1")
+                        .param("size", "10"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("page 不能小于 0"));
+
+        mockMvc.perform(get("/api/v1/admin/notices/page")
+                        .header("Authorization", "Bearer " + token)
+                        .param("page", "0")
+                        .param("size", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("size 不能小于 1"));
+    }
+
+    @Test
+    void pathAndQueryIdentifiersRejectNonPositiveValues() throws Exception {
+        String token = loginAndExtractToken("admin", "123456");
+
+        mockMvc.perform(get("/api/v1/platform/users/me/student-scope/check-student")
+                        .header("Authorization", "Bearer " + token)
+                        .param("studentId", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("学生ID必须大于 0"));
+
+        mockMvc.perform(get("/api/v1/knowledge/0")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("知识条目ID必须大于 0"));
+    }
+
+    @Test
+    void platformUserResetPasswordAndNotificationRejectInvalidBusinessRules() throws Exception {
+        String token = loginAndExtractToken("admin", "123456");
+
+        mockMvc.perform(post("/api/v1/platform/users")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": " bad-user ",
+                                  "role": "COUNSELOR",
+                                  "enabled": true,
+                                  "rawPassword": "123456",
+                                  "passwordResetRequired": true
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("用户名首尾不能包含空格"));
+
+        mockMvc.perform(post("/api/v1/platform/users/1/reset-password")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "newPassword": "123"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("重置密码长度不能少于 6 位"));
+
+        mockMvc.perform(post("/api/v1/platform/notifications/send")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "重复渠道测试",
+                                  "channel": "IN_APP",
+                                  "targetType": "CLASS",
+                                  "targetDescription": "2023级/计科一班",
+                                  "status": "SENT",
+                                  "recipientCount": 38,
+                                  "extensionChannels": ["EMAIL", "IN_APP"]
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("扩展渠道不能与主发送渠道重复"));
+    }
+
+    @Test
+    void platformImportTaskRejectsInvalidFileTypeAndTransition() throws Exception {
+        String token = loginAndExtractToken("admin", "123456");
+
+        mockMvc.perform(post("/api/v1/platform/import-tasks")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "taskType": "STUDENT_PROFILE",
+                                  "fileName": "students-import.pdf",
+                                  "totalRows": 12
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("导入文件仅支持 xlsx、xls、csv"));
+
+        mockMvc.perform(put("/api/v1/platform/import-tasks/2")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "SUCCESS",
+                                  "successRows": 20,
+                                  "failedRows": 1,
+                                  "errorSummary": "非法成功态"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message", containsString("SUCCESS 状态下")));
+    }
+
+    @Test
+    void platformListFiltersRejectUnsupportedEnumValues() throws Exception {
+        String token = loginAndExtractToken("admin", "123456");
+
+        mockMvc.perform(get("/api/v1/platform/users")
+                        .header("Authorization", "Bearer " + token)
+                        .param("role", "TEACHER"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("角色不存在: TEACHER"));
+
+        mockMvc.perform(get("/api/v1/platform/import-tasks/page")
+                        .header("Authorization", "Bearer " + token)
+                        .param("status", "DONE"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("导入任务状态不支持: DONE"));
+
+        mockMvc.perform(get("/api/v1/platform/notifications/send-records/page")
+                        .header("Authorization", "Bearer " + token)
+                        .param("channel", "SMS"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("通知渠道不支持: SMS"));
+    }
+
+    @Test
+    void worklogAndApprovalFiltersRejectUnsupportedValues() throws Exception {
+        String token = loginAndExtractToken("admin", "123456");
+
+        mockMvc.perform(get("/api/v1/worklogs/admin/filter")
+                        .header("Authorization", "Bearer " + token)
+                        .param("recorderRole", "TEACHER"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("记录人角色不支持: TEACHER"));
+
+        mockMvc.perform(get("/api/v1/admin/approvals/page")
+                        .header("Authorization", "Bearer " + token)
+                        .param("status", "DONE"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("审批状态不支持: DONE"));
+
+        mockMvc.perform(get("/api/v1/admin/approvals/page")
+                        .header("Authorization", "Bearer " + token)
+                        .param("certificateType", "获奖证明"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("证明类型仅支持 在读证明、党员身份证明、困难认定证明"));
+    }
+
+    @Test
+    void filtersAcceptNormalizedCaseAndTrimmedValues() throws Exception {
+        String token = loginAndExtractToken("admin", "123456");
+
+        mockMvc.perform(get("/api/v1/worklogs/admin/filter")
+                        .header("Authorization", "Bearer " + token)
+                        .param("recorderRole", " counselor "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray());
+
+        mockMvc.perform(get("/api/v1/admin/approvals/page")
+                        .header("Authorization", "Bearer " + token)
+                        .param("status", " pending ")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content").isArray());
+
+        mockMvc.perform(get("/api/v1/admin/notices/page")
+                        .header("Authorization", "Bearer " + token)
+                        .param("tag", " 流程 ")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content").isArray());
+
+        mockMvc.perform(get("/api/v1/platform/users")
+                        .header("Authorization", "Bearer " + token)
+                        .param("role", " counselor ")
+                        .param("keyword", " teacher "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].role").value("COUNSELOR"))
+                .andExpect(jsonPath("$.data[0].username").value("teacher01"));
+
+        mockMvc.perform(get("/api/v1/platform/import-tasks/page")
+                        .header("Authorization", "Bearer " + token)
+                        .param("status", " partial_success ")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].status").value("PARTIAL_SUCCESS"));
+
+        mockMvc.perform(get("/api/v1/admin/operation-logs/page")
+                        .header("Authorization", "Bearer " + token)
+                        .param("operatorRole", " counselor ")
+                        .param("targetKeyword", " 1001 ")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].operatorRole").value("COUNSELOR"))
+                .andExpect(jsonPath("$.data.content[0].target").value("证明申请#1001"));
+
+        mockMvc.perform(get("/api/v1/admin/knowledge/page")
+                        .header("Authorization", "Bearer " + token)
+                        .param("category", " 内部资料 ")
+                        .param("keyword", " 口径 ")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].category").value("内部资料"))
+                .andExpect(jsonPath("$.data.content[0].title").value("辅导员内部口径说明"));
+
+        mockMvc.perform(get("/api/v1/admin/advisor-scopes/page")
+                        .header("Authorization", "Bearer " + token)
+                        .param("advisorUsername", " advisor01 ")
+                        .param("className", " 计科一班 ")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].advisorUsername").value("advisor01"))
+                .andExpect(jsonPath("$.data.content[0].className").value("计科一班"));
+
+        mockMvc.perform(get("/api/v1/admin/import-tasks/2/errors/page")
+                        .header("Authorization", "Bearer " + token)
+                        .param("fieldName", " officialUrl ")
+                        .param("keyword", " bad-url ")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].fieldName").value("officialUrl"));
+
+        mockMvc.perform(get("/api/v1/platform/notifications/send-records/page")
+                        .header("Authorization", "Bearer " + token)
+                        .param("channel", " in_app ")
+                        .param("status", " sent ")
+                        .param("targetKeyword", " studentId=10001 ")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].targetDescription").value("studentId=10001"));
+
+        mockMvc.perform(get("/api/v1/admin/students/page")
+                        .header("Authorization", "Bearer " + token)
+                        .param("grade", " 2023级 ")
+                        .param("status", " active ")
+                        .param("keyword", " 张三 ")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].name").value("张三"))
+                .andExpect(jsonPath("$.data.content[0].status").value("ACTIVE"));
+
+        mockMvc.perform(get("/api/v1/admin/students/portraits/page")
+                        .header("Authorization", "Bearer " + token)
+                        .param("grade", " 2023级 ")
+                        .param("careerOrientation", " 升学 ")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].studentId").value(10001));
+
+        mockMvc.perform(get("/api/v1/knowledge/search")
+                        .header("Authorization", "Bearer " + token)
+                        .param("keyword", " 保密 "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].officialLinkOnly").value(true));
+
+        mockMvc.perform(get("/api/v1/admin/students/stats")
+                        .header("Authorization", "Bearer " + token)
+                        .param("status", " graduated "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalStudents").isNumber());
+    }
+
+    @Test
+    void studentFiltersRejectUnsupportedStatusValues() throws Exception {
+        String token = loginAndExtractToken("admin", "123456");
+
+        mockMvc.perform(get("/api/v1/admin/students/page")
+                        .header("Authorization", "Bearer " + token)
+                        .param("status", " done ")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("学生状态仅支持 ACTIVE、SUSPENDED、GRADUATED、TRANSFERRED、WITHDRAWN"));
+
+        mockMvc.perform(get("/api/v1/admin/students/stats")
+                        .header("Authorization", "Bearer " + token)
+                        .param("status", " archived "))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("学生状态仅支持 ACTIVE、SUSPENDED、GRADUATED、TRANSFERRED、WITHDRAWN"));
     }
 
     @Test

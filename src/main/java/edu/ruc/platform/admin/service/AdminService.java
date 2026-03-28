@@ -40,6 +40,7 @@ import edu.ruc.platform.auth.service.CurrentUserService;
 import edu.ruc.platform.common.api.PageResponse;
 import edu.ruc.platform.common.enums.DataImportTaskStatus;
 import edu.ruc.platform.common.exception.BusinessException;
+import edu.ruc.platform.common.support.QueryFilterSupport;
 import edu.ruc.platform.knowledge.domain.KnowledgeDocument;
 import edu.ruc.platform.certificate.repository.CertificateRequestRepository;
 import edu.ruc.platform.knowledge.repository.KnowledgeDocumentRepository;
@@ -55,6 +56,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -257,10 +259,13 @@ public class AdminService implements AdminApplicationService {
 
     @Override
     public List<AdvisorScopeBindingResponse> listAdvisorScopes(String advisorUsername, String grade, String className) {
+        String normalizedAdvisorUsername = QueryFilterSupport.trimToNull(advisorUsername);
+        String normalizedGrade = QueryFilterSupport.trimToNull(grade);
+        String normalizedClassName = QueryFilterSupport.trimToNull(className);
         return advisorScopeBindingRepository.findAll().stream()
-                .filter(item -> advisorUsername == null || advisorUsername.isBlank() || advisorUsername.equals(item.getAdvisorUsername()))
-                .filter(item -> grade == null || grade.isBlank() || grade.equals(item.getGrade()))
-                .filter(item -> className == null || className.isBlank() || className.equals(item.getClassName()))
+                .filter(item -> normalizedAdvisorUsername == null || normalizedAdvisorUsername.equalsIgnoreCase(item.getAdvisorUsername()))
+                .filter(item -> normalizedGrade == null || normalizedGrade.equals(item.getGrade()))
+                .filter(item -> normalizedClassName == null || normalizedClassName.equals(item.getClassName()))
                 .map(this::toAdvisorScopeResponse)
                 .toList();
     }
@@ -463,6 +468,7 @@ public class AdminService implements AdminApplicationService {
 
     @Override
     public DataImportTaskResponse createImportTask(DataImportTaskCreateRequest request) {
+        validateImportTaskCreateRequest(request);
         DataImportTask task = new DataImportTask();
         task.setTaskType(request.taskType());
         task.setFileName(request.fileName());
@@ -482,6 +488,7 @@ public class AdminService implements AdminApplicationService {
         DataImportTask task = dataImportTaskRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("导入任务不存在"));
         validateImportTaskRows(task.getTotalRows(), request.successRows(), request.failedRows());
+        validateImportTaskTransition(toImportTaskResponse(task), request);
         task.setStatus(DataImportTaskStatus.from(request.status()).name());
         task.setSuccessRows(request.successRows());
         task.setFailedRows(request.failedRows());
@@ -655,29 +662,38 @@ public class AdminService implements AdminApplicationService {
     }
 
     private List<DataImportTaskResponse> filterImportTasks(DataImportTaskFilterRequest request) {
+        String normalizedTaskType = QueryFilterSupport.normalizeUpper(request.taskType());
+        String normalizedStatus = QueryFilterSupport.normalizeUpper(request.status());
+        String normalizedOwnerKeyword = QueryFilterSupport.trimToNull(request.ownerKeyword());
         return listImportTasks().stream()
-                .filter(item -> request.taskType() == null || request.taskType().isBlank() || request.taskType().equals(item.taskType()))
-                .filter(item -> request.status() == null || request.status().isBlank() || request.status().equals(item.status()))
-                .filter(item -> request.ownerKeyword() == null || request.ownerKeyword().isBlank() || item.owner().contains(request.ownerKeyword()))
+                .filter(item -> normalizedTaskType == null || normalizedTaskType.equals(item.taskType()))
+                .filter(item -> normalizedStatus == null || normalizedStatus.equals(item.status()))
+                .filter(item -> normalizedOwnerKeyword == null || QueryFilterSupport.containsIgnoreCase(item.owner(), normalizedOwnerKeyword))
                 .toList();
     }
 
     private List<AdminOperationLogResponse> filterOperationLogs(AdminOperationLogFilterRequest request) {
+        String normalizedModule = QueryFilterSupport.trimToNull(request.module());
+        String normalizedAction = QueryFilterSupport.trimToNull(request.action());
+        String normalizedOperatorRole = QueryFilterSupport.trimToNull(request.operatorRole());
+        String normalizedTargetKeyword = QueryFilterSupport.trimToNull(request.targetKeyword());
         return listOperationLogs().stream()
-                .filter(item -> request.module() == null || request.module().isBlank() || request.module().equalsIgnoreCase(item.module()))
-                .filter(item -> request.action() == null || request.action().isBlank() || request.action().equalsIgnoreCase(item.action()))
-                .filter(item -> request.operatorRole() == null || request.operatorRole().isBlank() || request.operatorRole().equalsIgnoreCase(item.operatorRole()))
-                .filter(item -> request.targetKeyword() == null || request.targetKeyword().isBlank() || item.target().contains(request.targetKeyword()))
+                .filter(item -> normalizedModule == null || normalizedModule.equalsIgnoreCase(item.module()))
+                .filter(item -> normalizedAction == null || normalizedAction.equalsIgnoreCase(item.action()))
+                .filter(item -> normalizedOperatorRole == null || normalizedOperatorRole.equalsIgnoreCase(item.operatorRole()))
+                .filter(item -> normalizedTargetKeyword == null || QueryFilterSupport.containsIgnoreCase(item.target(), normalizedTargetKeyword))
                 .toList();
     }
 
     private List<AdminKnowledgeItemResponse> filterKnowledgeItems(AuthenticatedUser user, AdminKnowledgeFilterRequest request) {
+        String normalizedKeyword = QueryFilterSupport.trimToNull(request.keyword());
+        String normalizedCategory = QueryFilterSupport.trimToNull(request.category());
         return listKnowledgeItems(user).stream()
-                .filter(item -> request.keyword() == null || request.keyword().isBlank()
-                        || item.title().contains(request.keyword())
-                        || item.category().contains(request.keyword())
-                        || (item.sourceFileName() != null && item.sourceFileName().contains(request.keyword())))
-                .filter(item -> request.category() == null || request.category().isBlank() || request.category().equals(item.category()))
+                .filter(item -> normalizedKeyword == null
+                        || QueryFilterSupport.containsIgnoreCase(item.title(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.category(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.sourceFileName(), normalizedKeyword))
+                .filter(item -> normalizedCategory == null || normalizedCategory.equalsIgnoreCase(item.category()))
                 .filter(item -> request.published() == null || request.published().equals(item.published()))
                 .toList();
     }
@@ -711,13 +727,15 @@ public class AdminService implements AdminApplicationService {
         if (!dataImportTaskRepository.existsById(taskId)) {
             throw new BusinessException("导入任务不存在");
         }
+        String normalizedFieldName = QueryFilterSupport.trimToNull(request.fieldName());
+        String normalizedKeyword = QueryFilterSupport.trimToNull(request.keyword());
         return dataImportErrorItemRepository.findByTaskIdOrderByRowNumberAscCreatedAtAsc(taskId).stream()
                 .map(this::toImportErrorResponse)
                 .filter(item -> request.rowNumber() == null || request.rowNumber().equals(item.rowNumber()))
-                .filter(item -> request.fieldName() == null || request.fieldName().isBlank() || request.fieldName().equals(item.fieldName()))
-                .filter(item -> request.keyword() == null || request.keyword().isBlank()
-                        || item.errorMessage().contains(request.keyword())
-                        || (item.rawValue() != null && item.rawValue().contains(request.keyword())))
+                .filter(item -> normalizedFieldName == null || normalizedFieldName.equalsIgnoreCase(item.fieldName()))
+                .filter(item -> normalizedKeyword == null
+                        || QueryFilterSupport.containsIgnoreCase(item.errorMessage(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.rawValue(), normalizedKeyword))
                 .toList();
     }
 
@@ -750,15 +768,20 @@ public class AdminService implements AdminApplicationService {
 
     private List<Notice> filterNoticeEntities(AdminNoticeFilterRequest request) {
         AuthenticatedUser user = currentUserService.requireCurrentUser();
+        String normalizedKeyword = QueryFilterSupport.trimToNull(request.keyword());
+        String normalizedTag = QueryFilterSupport.trimToNull(request.tag());
+        String normalizedTargetKeyword = QueryFilterSupport.trimToNull(request.targetKeyword());
         return noticeRepository.findAllByOrderByPublishTimeDesc().stream()
                 .filter(item -> canViewNotice(user, item))
-                .filter(item -> request.keyword() == null || request.keyword().isBlank()
-                        || item.getTitle().contains(request.keyword())
-                        || item.getSummary().contains(request.keyword()))
-                .filter(item -> request.tag() == null || request.tag().isBlank()
-                        || (item.getTag() != null && List.of(item.getTag().split(",")).contains(request.tag())))
-                .filter(item -> request.targetKeyword() == null || request.targetKeyword().isBlank()
-                        || buildTargetDescription(item).contains(request.targetKeyword()))
+                .filter(item -> normalizedKeyword == null
+                        || QueryFilterSupport.containsIgnoreCase(item.getTitle(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.getSummary(), normalizedKeyword))
+                .filter(item -> normalizedTag == null
+                        || (item.getTag() != null && Arrays.stream(item.getTag().split(","))
+                        .map(String::trim)
+                        .anyMatch(tag -> tag.equalsIgnoreCase(normalizedTag))))
+                .filter(item -> normalizedTargetKeyword == null
+                        || QueryFilterSupport.containsIgnoreCase(buildTargetDescription(item), normalizedTargetKeyword))
                 .toList();
     }
 
@@ -825,6 +848,44 @@ public class AdminService implements AdminApplicationService {
     private void validateImportTaskRows(int totalRows, int successRows, int failedRows) {
         if (successRows + failedRows > totalRows) {
             throw new BusinessException("成功行数与失败行数之和不能超过总行数");
+        }
+    }
+
+    private void validateImportTaskCreateRequest(DataImportTaskCreateRequest request) {
+        List<String> allowedTaskTypes = List.of("STUDENT_PROFILE", "KNOWLEDGE_BASE", "NOTICE", "ADVISOR_SCOPE");
+        if (!allowedTaskTypes.contains(request.taskType())) {
+            throw new BusinessException("导入任务类型仅支持 STUDENT_PROFILE、KNOWLEDGE_BASE、NOTICE、ADVISOR_SCOPE");
+        }
+        String lowerCaseFileName = request.fileName().toLowerCase(java.util.Locale.ROOT);
+        if (!(lowerCaseFileName.endsWith(".xlsx") || lowerCaseFileName.endsWith(".xls") || lowerCaseFileName.endsWith(".csv"))) {
+            throw new BusinessException("导入文件仅支持 xlsx、xls、csv");
+        }
+    }
+
+    private void validateImportTaskTransition(DataImportTaskResponse current, DataImportTaskUpdateRequest request) {
+        String currentStatus = current.status();
+        String nextStatus = DataImportTaskStatus.from(request.status()).name();
+        if (DataImportTaskStatus.SUCCESS.name().equals(currentStatus) || DataImportTaskStatus.FAILED.name().equals(currentStatus)) {
+            throw new BusinessException("已完成的导入任务不允许再次更新状态");
+        }
+        if (DataImportTaskStatus.CREATED.name().equals(currentStatus) && DataImportTaskStatus.CREATED.name().equals(nextStatus)
+                && (request.successRows() > 0 || request.failedRows() > 0)) {
+            throw new BusinessException("CREATED 状态下成功行数和失败行数必须为 0");
+        }
+        if (DataImportTaskStatus.RUNNING.name().equals(nextStatus) && request.successRows() + request.failedRows() > current.totalRows()) {
+            throw new BusinessException("运行中的导入任务处理行数不能超过总行数");
+        }
+        if (DataImportTaskStatus.SUCCESS.name().equals(nextStatus) && request.successRows() != current.totalRows()) {
+            throw new BusinessException("SUCCESS 状态下成功行数必须等于总行数");
+        }
+        if (DataImportTaskStatus.SUCCESS.name().equals(nextStatus) && request.failedRows() != 0) {
+            throw new BusinessException("SUCCESS 状态下失败行数必须为 0");
+        }
+        if (DataImportTaskStatus.PARTIAL_SUCCESS.name().equals(nextStatus) && (request.successRows() <= 0 || request.failedRows() <= 0)) {
+            throw new BusinessException("PARTIAL_SUCCESS 状态下成功行数和失败行数都必须大于 0");
+        }
+        if (DataImportTaskStatus.FAILED.name().equals(nextStatus) && request.successRows() != 0) {
+            throw new BusinessException("FAILED 状态下成功行数必须为 0");
         }
     }
 

@@ -34,6 +34,7 @@ import edu.ruc.platform.common.api.PageResponse;
 import edu.ruc.platform.common.enums.DataImportTaskStatus;
 import edu.ruc.platform.common.exception.BusinessException;
 import edu.ruc.platform.common.mock.MockDataStore;
+import edu.ruc.platform.common.support.QueryFilterSupport;
 import edu.ruc.platform.notice.dto.TargetedNoticeResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
@@ -273,10 +274,13 @@ public class MockAdminService implements AdminApplicationService {
 
     @Override
     public List<AdvisorScopeBindingResponse> listAdvisorScopes(String advisorUsername, String grade, String className) {
+        String normalizedAdvisorUsername = QueryFilterSupport.trimToNull(advisorUsername);
+        String normalizedGrade = QueryFilterSupport.trimToNull(grade);
+        String normalizedClassName = QueryFilterSupport.trimToNull(className);
         return advisorScopes.stream()
-                .filter(item -> advisorUsername == null || advisorUsername.isBlank() || advisorUsername.equals(item.advisorUsername()))
-                .filter(item -> grade == null || grade.isBlank() || grade.equals(item.grade()))
-                .filter(item -> className == null || className.isBlank() || className.equals(item.className()))
+                .filter(item -> normalizedAdvisorUsername == null || normalizedAdvisorUsername.equalsIgnoreCase(item.advisorUsername()))
+                .filter(item -> normalizedGrade == null || normalizedGrade.equals(item.grade()))
+                .filter(item -> normalizedClassName == null || normalizedClassName.equals(item.className()))
                 .toList();
     }
 
@@ -642,14 +646,17 @@ public class MockAdminService implements AdminApplicationService {
     }
 
     private List<TargetedNoticeResponse> filterNotices(AdminNoticeFilterRequest request) {
+        String normalizedKeyword = QueryFilterSupport.trimToNull(request.keyword());
+        String normalizedTag = QueryFilterSupport.trimToNull(request.tag());
+        String normalizedTargetKeyword = QueryFilterSupport.trimToNull(request.targetKeyword());
         return listNotices().stream()
-                .filter(item -> request.keyword() == null || request.keyword().isBlank()
-                        || item.title().contains(request.keyword())
-                        || item.summary().contains(request.keyword()))
-                .filter(item -> request.tag() == null || request.tag().isBlank()
-                        || (item.tags() != null && item.tags().contains(request.tag())))
-                .filter(item -> request.targetKeyword() == null || request.targetKeyword().isBlank()
-                        || (item.targetDescription() != null && item.targetDescription().contains(request.targetKeyword())))
+                .filter(item -> normalizedKeyword == null
+                        || QueryFilterSupport.containsIgnoreCase(item.title(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.summary(), normalizedKeyword))
+                .filter(item -> normalizedTag == null
+                        || (item.tags() != null && item.tags().stream().anyMatch(tag -> tag.equalsIgnoreCase(normalizedTag))))
+                .filter(item -> normalizedTargetKeyword == null
+                        || QueryFilterSupport.containsIgnoreCase(item.targetDescription(), normalizedTargetKeyword))
                 .toList();
     }
 
@@ -708,19 +715,26 @@ public class MockAdminService implements AdminApplicationService {
     }
 
     private List<DataImportTaskResponse> filterImportTasks(DataImportTaskFilterRequest request) {
+        String normalizedTaskType = QueryFilterSupport.normalizeUpper(request.taskType());
+        String normalizedStatus = QueryFilterSupport.normalizeUpper(request.status());
+        String normalizedOwnerKeyword = QueryFilterSupport.trimToNull(request.ownerKeyword());
         return listImportTasks().stream()
-                .filter(item -> request.taskType() == null || request.taskType().isBlank() || request.taskType().equals(item.taskType()))
-                .filter(item -> request.status() == null || request.status().isBlank() || request.status().equals(item.status()))
-                .filter(item -> request.ownerKeyword() == null || request.ownerKeyword().isBlank() || item.owner().contains(request.ownerKeyword()))
+                .filter(item -> normalizedTaskType == null || normalizedTaskType.equals(item.taskType()))
+                .filter(item -> normalizedStatus == null || normalizedStatus.equals(item.status()))
+                .filter(item -> normalizedOwnerKeyword == null || QueryFilterSupport.containsIgnoreCase(item.owner(), normalizedOwnerKeyword))
                 .toList();
     }
 
     private List<AdminOperationLogResponse> filterOperationLogs(AdminOperationLogFilterRequest request) {
+        String normalizedModule = QueryFilterSupport.trimToNull(request.module());
+        String normalizedAction = QueryFilterSupport.trimToNull(request.action());
+        String normalizedOperatorRole = QueryFilterSupport.trimToNull(request.operatorRole());
+        String normalizedTargetKeyword = QueryFilterSupport.trimToNull(request.targetKeyword());
         return listOperationLogs().stream()
-                .filter(item -> request.module() == null || request.module().isBlank() || request.module().equalsIgnoreCase(item.module()))
-                .filter(item -> request.action() == null || request.action().isBlank() || request.action().equalsIgnoreCase(item.action()))
-                .filter(item -> request.operatorRole() == null || request.operatorRole().isBlank() || request.operatorRole().equalsIgnoreCase(item.operatorRole()))
-                .filter(item -> request.targetKeyword() == null || request.targetKeyword().isBlank() || item.target().contains(request.targetKeyword()))
+                .filter(item -> normalizedModule == null || normalizedModule.equalsIgnoreCase(item.module()))
+                .filter(item -> normalizedAction == null || normalizedAction.equalsIgnoreCase(item.action()))
+                .filter(item -> normalizedOperatorRole == null || normalizedOperatorRole.equalsIgnoreCase(item.operatorRole()))
+                .filter(item -> normalizedTargetKeyword == null || QueryFilterSupport.containsIgnoreCase(item.target(), normalizedTargetKeyword))
                 .toList();
     }
 
@@ -802,23 +816,27 @@ public class MockAdminService implements AdminApplicationService {
         if (!exists) {
             throw new BusinessException("导入任务不存在: " + taskId);
         }
+        String normalizedFieldName = QueryFilterSupport.trimToNull(request.fieldName());
+        String normalizedKeyword = QueryFilterSupport.trimToNull(request.keyword());
         return importErrors.stream()
                 .filter(item -> item.taskId().equals(taskId))
                 .filter(item -> request.rowNumber() == null || request.rowNumber().equals(item.rowNumber()))
-                .filter(item -> request.fieldName() == null || request.fieldName().isBlank() || request.fieldName().equals(item.fieldName()))
-                .filter(item -> request.keyword() == null || request.keyword().isBlank()
-                        || item.errorMessage().contains(request.keyword())
-                        || (item.rawValue() != null && item.rawValue().contains(request.keyword())))
+                .filter(item -> normalizedFieldName == null || normalizedFieldName.equalsIgnoreCase(item.fieldName()))
+                .filter(item -> normalizedKeyword == null
+                        || QueryFilterSupport.containsIgnoreCase(item.errorMessage(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.rawValue(), normalizedKeyword))
                 .toList();
     }
 
     private List<AdminKnowledgeItemResponse> filterKnowledgeItems(AuthenticatedUser user, AdminKnowledgeFilterRequest request) {
+        String normalizedKeyword = QueryFilterSupport.trimToNull(request.keyword());
+        String normalizedCategory = QueryFilterSupport.trimToNull(request.category());
         return listKnowledgeItems(user).stream()
-                .filter(item -> request.keyword() == null || request.keyword().isBlank()
-                        || item.title().contains(request.keyword())
-                        || item.category().contains(request.keyword())
-                        || (item.sourceFileName() != null && item.sourceFileName().contains(request.keyword())))
-                .filter(item -> request.category() == null || request.category().isBlank() || request.category().equals(item.category()))
+                .filter(item -> normalizedKeyword == null
+                        || QueryFilterSupport.containsIgnoreCase(item.title(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.category(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.sourceFileName(), normalizedKeyword))
+                .filter(item -> normalizedCategory == null || normalizedCategory.equalsIgnoreCase(item.category()))
                 .filter(item -> request.published() == null || request.published().equals(item.published()))
                 .toList();
     }

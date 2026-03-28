@@ -15,7 +15,10 @@ import edu.ruc.platform.worklog.dto.WorklogFilterRequest;
 import edu.ruc.platform.worklog.dto.WorklogOverviewResponse;
 import edu.ruc.platform.worklog.service.StudentWorkLogApplicationService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,6 +33,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
+@Validated
 @RequestMapping("/api/v1/worklogs")
 @RequiredArgsConstructor
 public class StudentWorkLogController {
@@ -44,33 +48,33 @@ public class StudentWorkLogController {
     }
 
     @PutMapping("/{id}")
-    public ApiResponse<StudentWorkLogResponse> update(@PathVariable Long id,
+    public ApiResponse<StudentWorkLogResponse> update(@Positive(message = "工作记录ID必须大于 0") @PathVariable Long id,
                                                       @Valid @RequestBody StudentWorkLogUpdateRequest request) {
         currentUserService.requireAnyRole(RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR, RoleType.CLASS_ADVISOR, RoleType.LEAGUE_SECRETARY);
         return ApiResponse.success("工作记录已更新", service.update(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
+    public ApiResponse<Void> delete(@Positive(message = "工作记录ID必须大于 0") @PathVariable Long id) {
         currentUserService.requireAnyRole(RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR, RoleType.CLASS_ADVISOR, RoleType.LEAGUE_SECRETARY);
         service.delete(id);
         return ApiResponse.success("工作记录已删除", null);
     }
 
     @GetMapping("/student/{studentId}")
-    public ApiResponse<List<StudentWorkLogResponse>> listByStudent(@PathVariable Long studentId) {
+    public ApiResponse<List<StudentWorkLogResponse>> listByStudent(@Positive(message = "学生ID必须大于 0") @PathVariable Long studentId) {
         currentUserService.requireStudentAccess(studentId, RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
         return ApiResponse.success(service.listByStudent(studentId));
     }
 
     @GetMapping("/student/{studentId}/summary")
-    public ApiResponse<StudentWorkloadSummaryResponse> summarize(@PathVariable Long studentId) {
+    public ApiResponse<StudentWorkloadSummaryResponse> summarize(@Positive(message = "学生ID必须大于 0") @PathVariable Long studentId) {
         currentUserService.requireStudentAccess(studentId, RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
         return ApiResponse.success(service.summarize(studentId));
     }
 
     @GetMapping("/{id}/actions")
-    public ApiResponse<List<WorklogActionLogResponse>> actions(@PathVariable Long id) {
+    public ApiResponse<List<WorklogActionLogResponse>> actions(@Positive(message = "工作记录ID必须大于 0") @PathVariable Long id) {
         currentUserService.requireAnyRole(RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR, RoleType.CLASS_ADVISOR);
         return ApiResponse.success(service.listActionLogs(id));
     }
@@ -82,7 +86,7 @@ public class StudentWorkLogController {
     }
 
     @GetMapping("/admin/filter")
-    public ApiResponse<List<StudentWorkLogResponse>> filter(@RequestParam(required = false) Long studentId,
+    public ApiResponse<List<StudentWorkLogResponse>> filter(@Positive(message = "学生ID必须大于 0") @RequestParam(required = false) Long studentId,
                                                             @RequestParam(required = false) String category,
                                                             @RequestParam(required = false) String recorderRole,
                                                             @RequestParam(required = false) String grade,
@@ -96,7 +100,7 @@ public class StudentWorkLogController {
     }
 
     @GetMapping("/admin/stats")
-    public ApiResponse<WorklogAdminStatsResponse> adminStats(@RequestParam(required = false) Long studentId,
+    public ApiResponse<WorklogAdminStatsResponse> adminStats(@Positive(message = "学生ID必须大于 0") @RequestParam(required = false) Long studentId,
                                                              @RequestParam(required = false) String category,
                                                              @RequestParam(required = false) String recorderRole,
                                                              @RequestParam(required = false) String grade,
@@ -108,15 +112,15 @@ public class StudentWorkLogController {
     }
 
     @GetMapping("/admin/page")
-    public ApiResponse<PageResponse<StudentWorkLogResponse>> adminPage(@RequestParam(required = false) Long studentId,
+    public ApiResponse<PageResponse<StudentWorkLogResponse>> adminPage(@Positive(message = "学生ID必须大于 0") @RequestParam(required = false) Long studentId,
                                                                        @RequestParam(required = false) String category,
                                                                        @RequestParam(required = false) String recorderRole,
                                                                        @RequestParam(required = false) String grade,
                                                                        @RequestParam(required = false) String className,
                                                                        @RequestParam(required = false) LocalDate startDate,
                                                                        @RequestParam(required = false) LocalDate endDate,
-                                                                       @RequestParam(defaultValue = "0") int page,
-                                                                       @RequestParam(defaultValue = "10") int size,
+                                                                       @Min(value = 0, message = "page 不能小于 0") @RequestParam(defaultValue = "0") int page,
+                                                                       @Min(value = 1, message = "size 不能小于 1") @RequestParam(defaultValue = "10") int size,
                                                                        @RequestParam(defaultValue = "workDate") String sortBy,
                                                                        @RequestParam(defaultValue = "desc") String sortDir) {
         currentUserService.requireAnyRole(RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR, RoleType.CLASS_ADVISOR);

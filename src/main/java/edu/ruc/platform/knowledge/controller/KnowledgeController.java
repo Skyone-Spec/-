@@ -4,6 +4,7 @@ import edu.ruc.platform.common.api.ApiResponse;
 import edu.ruc.platform.knowledge.dto.KnowledgeDetailResponse;
 import edu.ruc.platform.knowledge.dto.KnowledgeSearchResponse;
 import edu.ruc.platform.knowledge.service.KnowledgeApplicationService;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,7 +34,7 @@ public class KnowledgeController {
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<KnowledgeDetailResponse> detail(@PathVariable Long id) {
+    public ApiResponse<KnowledgeDetailResponse> detail(@Positive(message = "知识条目ID必须大于 0") @PathVariable Long id) {
         return ApiResponse.success(knowledgeService.getDetail(id));
     }
 }

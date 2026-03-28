@@ -11,7 +11,10 @@ import edu.ruc.platform.common.api.ApiResponse;
 import edu.ruc.platform.common.api.PageResponse;
 import edu.ruc.platform.common.enums.RoleType;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 
 @RestController
+@Validated
 @RequestMapping("/api/v1/admin/approvals")
 @RequiredArgsConstructor
 public class AdminApprovalController {
@@ -37,12 +41,12 @@ public class AdminApprovalController {
     }
 
     @GetMapping("/page")
-    public ApiResponse<PageResponse<ApprovalTaskResponse>> page(@RequestParam(required = false) Long studentId,
+    public ApiResponse<PageResponse<ApprovalTaskResponse>> page(@Positive(message = "学生ID必须大于 0") @RequestParam(required = false) Long studentId,
                                                                 @RequestParam(required = false) String status,
                                                                 @RequestParam(required = false) String certificateType,
                                                                 @RequestParam(required = false) String keyword,
-                                                                @RequestParam(defaultValue = "0") int page,
-                                                                @RequestParam(defaultValue = "10") int size) {
+                                                                @Min(value = 0, message = "page 不能小于 0") @RequestParam(defaultValue = "0") int page,
+                                                                @Min(value = 1, message = "size 不能小于 1") @RequestParam(defaultValue = "10") int size) {
         currentUserService.requireAnyRole(RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR, RoleType.CLASS_ADVISOR);
         return ApiResponse.success(certificateService.pageApprovalTasks(
                 new ApprovalTaskFilterRequest(studentId, status, certificateType, keyword),
@@ -52,7 +56,7 @@ public class AdminApprovalController {
     }
 
     @GetMapping("/stats")
-    public ApiResponse<ApprovalTaskStatsResponse> stats(@RequestParam(required = false) Long studentId,
+    public ApiResponse<ApprovalTaskStatsResponse> stats(@Positive(message = "学生ID必须大于 0") @RequestParam(required = false) Long studentId,
                                                         @RequestParam(required = false) String status,
                                                         @RequestParam(required = false) String certificateType,
                                                         @RequestParam(required = false) String keyword) {
@@ -63,13 +67,13 @@ public class AdminApprovalController {
     }
 
     @GetMapping("/{requestId}/history")
-    public ApiResponse<List<ApprovalHistoryResponse>> history(@PathVariable Long requestId) {
+    public ApiResponse<List<ApprovalHistoryResponse>> history(@Positive(message = "申请ID必须大于 0") @PathVariable Long requestId) {
         currentUserService.requireAnyRole(RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR, RoleType.CLASS_ADVISOR);
         return ApiResponse.success(certificateService.listApprovalHistory(requestId));
     }
 
     @PostMapping("/{requestId}/action")
-    public ApiResponse<ApprovalTaskResponse> action(@PathVariable Long requestId,
+    public ApiResponse<ApprovalTaskResponse> action(@Positive(message = "申请ID必须大于 0") @PathVariable Long requestId,
                                                     @Valid @RequestBody ApprovalActionRequest request) {
         currentUserService.requireAnyRole(RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
         return ApiResponse.success("审批已处理", certificateService.handleApproval(requestId, request));

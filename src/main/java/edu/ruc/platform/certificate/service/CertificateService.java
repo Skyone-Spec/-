@@ -21,6 +21,7 @@ import edu.ruc.platform.auth.service.StudentDataScopeService;
 import edu.ruc.platform.common.api.PageResponse;
 import edu.ruc.platform.common.exception.BusinessException;
 import edu.ruc.platform.common.enums.RoleType;
+import edu.ruc.platform.common.support.QueryFilterSupport;
 import edu.ruc.platform.student.domain.AdvisorScopeBinding;
 import edu.ruc.platform.student.domain.StudentProfile;
 import edu.ruc.platform.student.repository.AdvisorScopeBindingRepository;
@@ -302,6 +303,7 @@ public class CertificateService implements CertificateApplicationService {
         CertificateRequest entity = certificateRequestRepository.findById(requestId)
                 .orElseThrow(() -> new BusinessException("审批单不存在"));
         AuthenticatedUser operator = currentUserService.requireCurrentUser();
+        validateOperatorPermission(entity, operator, request.action());
         validateActionWindow(entity, request.action());
         String fromStatus = entity.getStatus();
         String nextStatus = resolveNextStatus(entity.getStatus(), request.action());
@@ -330,6 +332,33 @@ public class CertificateService implements CertificateApplicationService {
         );
     }
 
+    private void validateOperatorPermission(CertificateRequest entity, AuthenticatedUser operator, String action) {
+        String normalizedAction = action.trim().toLowerCase();
+        if ("withdraw".equals(normalizedAction) || "resubmit".equals(normalizedAction)) {
+            if (!operator.userId().equals(entity.getStudentId())
+                    && !RoleType.SUPER_ADMIN.name().equals(operator.role())
+                    && !RoleType.COLLEGE_ADMIN.name().equals(operator.role())
+                    && !RoleType.COUNSELOR.name().equals(operator.role())) {
+                throw new BusinessException("当前账号无权执行该审批动作");
+            }
+            return;
+        }
+        if (!"approve".equals(normalizedAction) && !"reject".equals(normalizedAction)) {
+            return;
+        }
+        if ("PENDING".equalsIgnoreCase(entity.getStatus())
+                && !(RoleType.COUNSELOR.name().equals(operator.role())
+                || RoleType.SUPER_ADMIN.name().equals(operator.role())
+                || RoleType.COLLEGE_ADMIN.name().equals(operator.role()))) {
+            throw new BusinessException("待初审申请仅辅导员或管理员可处理");
+        }
+        if ("COUNSELOR_APPROVED".equalsIgnoreCase(entity.getStatus())
+                && !(RoleType.COLLEGE_ADMIN.name().equals(operator.role())
+                || RoleType.SUPER_ADMIN.name().equals(operator.role()))) {
+            throw new BusinessException("辅导员初审通过后的申请仅学院管理员可终审");
+        }
+    }
+
     private void validateActionWindow(CertificateRequest entity, String action) {
         String normalizedAction = action.trim().toLowerCase();
         if ("withdraw".equals(normalizedAction)) {
@@ -344,15 +373,29 @@ public class CertificateService implements CertificateApplicationService {
     }
 
     private List<ApprovalTaskResponse> filterApprovalTasks(ApprovalTaskFilterRequest request) {
+        validateApprovalTaskFilter(request);
+        String normalizedStatus = QueryFilterSupport.normalizeUpper(request.status());
+        String normalizedCertificateType = normalizeCertificateType(request.certificateType());
+        String normalizedKeyword = QueryFilterSupport.trimToNull(request.keyword());
         return listApprovalTasks().stream()
                 .filter(item -> request.studentId() == null || request.studentId().equals(item.studentId()))
-                .filter(item -> request.status() == null || request.status().isBlank() || request.status().equals(item.status()))
-                .filter(item -> request.certificateType() == null || request.certificateType().isBlank() || request.certificateType().equals(item.certificateType()))
-                .filter(item -> request.keyword() == null || request.keyword().isBlank()
-                        || item.studentName().contains(request.keyword())
-                        || item.reason().contains(request.keyword())
-                        || item.certificateType().contains(request.keyword()))
+                .filter(item -> normalizedStatus == null || normalizedStatus.equalsIgnoreCase(item.status()))
+                .filter(item -> normalizedCertificateType == null || normalizedCertificateType.equals(item.certificateType()))
+                .filter(item -> normalizedKeyword == null
+                        || QueryFilterSupport.containsIgnoreCase(item.studentName(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.reason(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.certificateType(), normalizedKeyword))
                 .toList();
+    }
+
+    private void validateApprovalTaskFilter(ApprovalTaskFilterRequest request) {
+        if (request == null) {
+            return;
+        }
+        QueryFilterSupport.requireEnumValue(edu.ruc.platform.common.enums.ApprovalStatus.class, request.status(), "审批状态不支持: ");
+        if (request.certificateType() != null && !request.certificateType().isBlank()) {
+            validateCertificateType(request.certificateType());
+        }
     }
 
     private boolean canAccessApprovalTask(AuthenticatedUser user, Long studentId) {

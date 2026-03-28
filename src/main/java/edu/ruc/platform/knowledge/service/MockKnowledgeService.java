@@ -5,6 +5,7 @@ import edu.ruc.platform.certificate.dto.CertificateRequestResponse;
 import edu.ruc.platform.certificate.service.CertificateApplicationService;
 import edu.ruc.platform.common.exception.BusinessException;
 import edu.ruc.platform.common.mock.MockDataStore;
+import edu.ruc.platform.common.support.QueryFilterSupport;
 import edu.ruc.platform.knowledge.dto.KnowledgeDetailResponse;
 import edu.ruc.platform.knowledge.dto.KnowledgeSearchResponse;
 import edu.ruc.platform.notice.dto.TargetedNoticeResponse;
@@ -34,11 +35,15 @@ public class MockKnowledgeService implements KnowledgeApplicationService {
 
     @Override
     public List<KnowledgeSearchResponse> search(String keyword) {
+        String normalizedKeyword = QueryFilterSupport.trimToNull(keyword);
+        if (normalizedKeyword == null) {
+            return List.of();
+        }
         return mockDataStore.knowledgeDocuments()
                 .stream()
-                .filter(item -> item.title().contains(keyword)
-                        || item.category().contains(keyword)
-                        || item.answer().contains(keyword))
+                .filter(item -> QueryFilterSupport.containsIgnoreCase(item.title(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.category(), normalizedKeyword)
+                        || QueryFilterSupport.containsIgnoreCase(item.answer(), normalizedKeyword))
                 .map(this::toSafeSearchResponse)
                 .toList();
     }
@@ -165,8 +170,8 @@ public class MockKnowledgeService implements KnowledgeApplicationService {
 
     private boolean isOfficialLinkOnly(KnowledgeSearchResponse item) {
         return "数据安全".equals(item.category())
-                || item.title().contains("保密")
-                || item.answer().contains("严格控制");
+                || QueryFilterSupport.containsIgnoreCase(item.title(), "保密")
+                || QueryFilterSupport.containsIgnoreCase(item.answer(), "严格控制");
     }
 
     private String buildSafetyTip(KnowledgeSearchResponse item) {
