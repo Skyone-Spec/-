@@ -3,6 +3,22 @@
 团队分工与当前仓库边界见 [TEAM_SCOPE.md](/home/skyone/spec/student-service-platform-backend/TEAM_SCOPE.md)。
 [需求整合](/home/skyone/spec/student-service-platform-backend/需求整合) 中 2026-03-23 新增需求文档已复核，当前后端方向仍以“多级权限、知识库、审批留痕、学生状态管理、保守型学业分析”为主。
 
+## 原型链接
+
+### 服务端小程序
+
+https://js.design/f/eyyd7G?type=plugin&resourceId=696d07b3b5e8b987e5b0c43c&p=IKnxcq3HOR&mode=design
+
+1. 部分交互由于重复未重新设计
+2. 即时设计交互可能存在卡顿、无法跳转等问题
+3. 暂未设置AI智能总结原型
+
+### 后端管理平台
+
+https://www.figma.com/make/ZJGFsGdIck8BCnslRGJC50/%E5%90%8E%E7%AB%AF%E7%AE%A1%E7%90%86%E5%B9%B3%E5%8F%B0%E5%8E%9F%E5%9E%8B%E5%9B%BE?t=WFEF4Lm4R919F51L-1&preview-route=%2Foperation-log
+
+1. 前端设计时可以参考侧边栏的代码（figma make）
+
 ## 项目定位
 
 本项目基于需求文档《学院学生综合服务与党团管理平台》及 13:10 会议增补需求搭建后端框架，服务对象包括：
