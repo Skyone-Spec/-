@@ -98,6 +98,7 @@ https://www.figma.com/make/ZJGFsGdIck8BCnslRGJC50/%E5%90%8E%E7%AB%AF%E7%AE%A1%E7
 - 知识库管理、附件上传、模板下载
 - 审批流、审批历史、管理员操作日志
 - 导入任务、导入错误明细、导入结果回执
+- 导入执行结果整批回填、错误快照替换、执行批次号/回调来源留痕
 - 学生状态字段、状态历史、学生画像元数据
 - 平台安全策略、上传策略、文件上传与通知发送记录
 - 电子证明“仅学生本人申请/查询/学生端撤回重提”的权限校验
@@ -105,7 +106,7 @@ https://www.figma.com/make/ZJGFsGdIck8BCnslRGJC50/%E5%90%8E%E7%AB%AF%E7%AE%A1%E7
 当前仍应视为“部分完成 / 继续迭代”的需求包括：
 
 - Kingbase 真实数据联调与桥接脚本落库验收
-- 学业分析的保守型规则继续细化，但不输出高风险自动毕业判断
+- 学业分析已补充结构化人工复核提示，后续仍可继续细化规则，但不输出高风险自动毕业判断
 - 部分平台/管理能力的真实数据闭环验证，而不只是 mock 联调
 
 ## 已提供接口
@@ -231,8 +232,11 @@ https://www.figma.com/make/ZJGFsGdIck8BCnslRGJC50/%E5%90%8E%E7%AB%AF%E7%AE%A1%E7
 - `PUT /api/v1/platform/import-tasks/{taskId}`
 - `GET /api/v1/platform/import-tasks/page`
 - `GET /api/v1/platform/import-tasks/{taskId}/receipt`
+- `POST /api/v1/platform/import-tasks/{taskId}/execution-result`
 - `POST /api/v1/platform/import-tasks/{taskId}/errors`
 - `GET /api/v1/platform/import-tasks/{taskId}/errors/page`
+- 平台侧已支持“导入任务创建 -> 执行结果整批回填 -> 错误快照替换 -> 结果回执查询”的完整后端链路
+- 执行结果回填现已要求 `executionBatchNo`、`callbackSource`，并且仅允许任务负责人、`COLLEGE_ADMIN`、`SUPER_ADMIN` 回填
 - `GET /api/v1/platform/audit/admin-operation-logs/page`
 - 管理操作日志分页结果包含 `detail`，安全策略更新会记录修改前后值
 - `GET /api/v1/platform/audit/approval-logs/{requestId}`

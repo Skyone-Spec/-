@@ -52,7 +52,8 @@ class AuthIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.username").value("admin"))
-                .andExpect(jsonPath("$.data.role").value("SUPER_ADMIN"));
+                .andExpect(jsonPath("$.data.role").value("SUPER_ADMIN"))
+                .andExpect(jsonPath("$.data.studentId").value((Object) null));
 
         mockMvc.perform(post("/api/v1/auth/logout")
                         .header("Authorization", "Bearer " + token))
@@ -89,6 +90,30 @@ class AuthIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.pendingApprovals").isNumber());
+    }
+
+    @Test
+    void studentLoginReturnsStudentId() throws Exception {
+        String loginResponse = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "2023100001",
+                                  "password": "123456"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String token = objectMapper.readTree(loginResponse).path("data").path("token").asText();
+
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userId").value(10001))
+                .andExpect(jsonPath("$.data.studentId").value(10001));
     }
 
     @Test

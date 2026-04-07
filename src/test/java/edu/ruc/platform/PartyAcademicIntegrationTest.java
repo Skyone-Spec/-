@@ -81,6 +81,8 @@ class PartyAcademicIntegrationTest {
                 .andExpect(jsonPath("$.data.highlightedModules[0]").value("专业核心课"))
                 .andExpect(jsonPath("$.data.missingModules[0].missingCredits").value(6))
                 .andExpect(jsonPath("$.data.missingModules[0].completionRate").value(67))
+                .andExpect(jsonPath("$.data.reviewHints").isArray())
+                .andExpect(jsonPath("$.data.reviewHints[0]").isString())
                 .andExpect(jsonPath("$.data.dataSourceNote").isString())
                 .andExpect(jsonPath("$.data.missingModules").isArray());
     }

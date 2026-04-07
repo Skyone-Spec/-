@@ -11,6 +11,7 @@ import edu.ruc.platform.platform.dto.PlatformContractResponse;
 import edu.ruc.platform.platform.dto.PlatformFileUploadResponse;
 import edu.ruc.platform.platform.dto.PlatformFileUploadRecordResponse;
 import edu.ruc.platform.platform.dto.PlatformImportErrorCreateRequest;
+import edu.ruc.platform.platform.dto.PlatformImportExecutionResultRequest;
 import edu.ruc.platform.platform.dto.PlatformImportTaskCreateRequest;
 import edu.ruc.platform.platform.dto.PlatformImportTaskReceiptResponse;
 import edu.ruc.platform.platform.dto.PlatformImportTaskUpdateRequest;
@@ -372,6 +373,15 @@ public class PlatformController {
     public ApiResponse<PlatformImportTaskReceiptResponse> createImportError(@Positive(message = "导入任务ID必须大于 0") @PathVariable Long taskId,
                                                                             @Valid @RequestBody PlatformImportErrorCreateRequest request) {
         return ApiResponse.success("导入错误明细已登记", platformService.createImportError(taskId, request));
+    }
+
+    @PostMapping("/import-tasks/{taskId}/execution-result")
+    @RequireRoles({
+            RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR
+    })
+    public ApiResponse<PlatformImportTaskReceiptResponse> applyImportExecutionResult(@Positive(message = "导入任务ID必须大于 0") @PathVariable Long taskId,
+                                                                                      @Valid @RequestBody PlatformImportExecutionResultRequest request) {
+        return ApiResponse.success("导入执行结果已回填", platformService.applyImportExecutionResult(taskId, request));
     }
 
     @GetMapping("/import-tasks/{taskId}/receipt")

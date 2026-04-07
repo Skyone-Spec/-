@@ -44,6 +44,7 @@ public class JwtTokenService implements TokenService {
                 .id(UUID.randomUUID().toString())
                 .subject(user.username())
                 .claim("uid", user.userId())
+                .claim("sid", user.studentId())
                 .claim("role", user.role())
                 .claim("studentNo", user.studentNo())
                 .claim("name", user.name())
@@ -63,8 +64,10 @@ public class JwtTokenService implements TokenService {
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
+            Number sid = claims.get("sid", Number.class);
             return new AuthenticatedUser(
                     claims.get("uid", Number.class).longValue(),
+                    sid != null ? sid.longValue() : null,
                     claims.getSubject(),
                     claims.get("role", String.class),
                     claims.get("studentNo", String.class),

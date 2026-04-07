@@ -88,8 +88,11 @@ public class MockStudentProfileService implements StudentProfileApplicationServi
     @Override
     public StudentProfileResponse currentStudentProfile() {
         AuthenticatedUser user = currentUserService.requireCurrentUser();
+        if (user.studentId() == null) {
+            throw new BusinessException("当前账号未关联学生档案");
+        }
         return students.stream()
-                .filter(item -> item.id().equals(user.userId()))
+                .filter(item -> item.id().equals(user.studentId()))
                 .findFirst()
                 .map(item -> maskForRole(item, user))
                 .orElseThrow(() -> new BusinessException("当前学生信息不存在"));

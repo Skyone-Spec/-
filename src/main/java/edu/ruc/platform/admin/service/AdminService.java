@@ -583,9 +583,10 @@ public class AdminService implements AdminApplicationService {
             job.setSuccessRows(0);
             job.setFailedRows(0);
             job.setErrorMessage(null);
-            job.setResultJson(buildImportJobResultJson("CREATED", request.owner()));
             job.setStartedBy(user.userId());
             job.setStartedAt(LocalDateTime.now());
+            job = latestAuditImportJobRepository.save(job);
+            job.setResultJson(buildImportJobResultJson(job, "CREATED", request.owner(), sourceFile, List.of()));
             job = latestAuditImportJobRepository.save(job);
             writeOperationLog("IMPORT_TASK", "CREATE", request.fileName(), "SUCCESS", request.taskType());
             return toLatestImportTaskResponse(job);
@@ -615,10 +616,16 @@ public class AdminService implements AdminApplicationService {
             job.setSuccessRows(request.successRows());
             job.setFailedRows(request.failedRows());
             job.setErrorMessage(request.errorSummary());
-            job.setResultJson(updateImportJobResultJson(job.getResultJson(), request.status()));
             if (!"RUNNING".equals(request.status()) && !"CREATED".equals(request.status())) {
                 job.setFinishedAt(LocalDateTime.now());
+            } else {
+                job.setFinishedAt(null);
             }
+            LatestFileObject sourceFile = latestFileObjectRepository.findById(job.getSourceFileId()).orElse(null);
+            List<DataImportErrorItemResponse> errors = readLatestImportErrors(job);
+            String ownerName = parseLatestImportJobMeta(job.getResultJson())
+                    .getOrDefault("ownerName", resolveOperatorName(job.getStartedBy()));
+            job.setResultJson(buildImportJobResultJson(job, request.status(), ownerName, sourceFile, errors));
             job = latestAuditImportJobRepository.save(job);
             writeOperationLog("IMPORT_TASK", "UPDATE", toLatestImportTaskResponse(job).fileName(), request.status(), request.errorSummary());
             return toLatestImportTaskResponse(job);
@@ -683,7 +690,12 @@ public class AdminService implements AdminApplicationService {
             errors.sort(java.util.Comparator
                     .comparing(DataImportErrorItemResponse::rowNumber)
                     .thenComparing(DataImportErrorItemResponse::createdAt));
-            job.setResultJson(updateImportJobErrorsJson(job.getResultJson(), errors));
+            LatestFileObject sourceFile = latestFileObjectRepository.findById(job.getSourceFileId()).orElse(null);
+            String appStatus = parseLatestImportJobMeta(job.getResultJson())
+                    .getOrDefault("appStatus", deriveImportTaskStatus(job.getStatus(), job.getSuccessRows(), job.getFailedRows()));
+            String ownerName = parseLatestImportJobMeta(job.getResultJson())
+                    .getOrDefault("ownerName", resolveOperatorName(job.getStartedBy()));
+            job.setResultJson(buildImportJobResultJson(job, appStatus, ownerName, sourceFile, errors));
             latestAuditImportJobRepository.save(job);
             writeOperationLog("IMPORT_TASK", "ADD_ERROR", toLatestImportTaskResponse(job).fileName(), "SUCCESS", "row=" + request.rowNumber());
             return created;
@@ -699,6 +711,86 @@ public class AdminService implements AdminApplicationService {
         item = dataImportErrorItemRepository.save(item);
         writeOperationLog("IMPORT_TASK", "ADD_ERROR", task.getFileName(), "SUCCESS", "row=" + request.rowNumber());
         return toImportErrorResponse(item);
+    }
+
+    @Override
+    public void replaceImportErrors(Long taskId, List<DataImportErrorItemCreateRequest> requests) {
+        List<DataImportErrorItemCreateRequest> safeRequests = requests == null ? List.of() : requests;
+        if (isKingbaseProfile()) {
+            LatestAuditImportJob job = latestAuditImportJobRepository.findById(taskId)
+                    .orElseThrow(() -> new BusinessException("导入任务不存在"));
+            DataImportTaskResponse task = toLatestImportTaskResponse(job);
+            List<DataImportErrorItemResponse> errors = new java.util.ArrayList<>();
+            for (DataImportErrorItemCreateRequest request : safeRequests) {
+                validateImportErrorRequest(task, request);
+                errors.add(new DataImportErrorItemResponse(
+                        System.currentTimeMillis() + errors.size(),
+                        taskId,
+                        request.rowNumber(),
+                        request.fieldName(),
+                        request.errorMessage(),
+                        request.rawValue(),
+                        LocalDateTime.now()
+                ));
+            }
+            LatestFileObject sourceFile = latestFileObjectRepository.findById(job.getSourceFileId()).orElse(null);
+            String appStatus = parseLatestImportJobMeta(job.getResultJson())
+                    .getOrDefault("appStatus", deriveImportTaskStatus(job.getStatus(), job.getSuccessRows(), job.getFailedRows()));
+            String ownerName = parseLatestImportJobMeta(job.getResultJson())
+                    .getOrDefault("ownerName", resolveOperatorName(job.getStartedBy()));
+            job.setResultJson(buildImportJobResultJson(job, appStatus, ownerName, sourceFile, errors));
+            latestAuditImportJobRepository.save(job);
+            writeOperationLog("IMPORT_TASK", "REPLACE_ERRORS", task.fileName(), "SUCCESS", "count=" + errors.size());
+            return;
+        }
+        DataImportTask task = dataImportTaskRepository.findById(taskId)
+                .orElseThrow(() -> new BusinessException("导入任务不存在"));
+        dataImportErrorItemRepository.deleteByTaskId(taskId);
+        for (DataImportErrorItemCreateRequest request : safeRequests) {
+            validateImportErrorRequest(toImportTaskResponse(task), request);
+            DataImportErrorItem item = new DataImportErrorItem();
+            item.setTaskId(taskId);
+            item.setRowNumber(request.rowNumber());
+            item.setFieldName(request.fieldName());
+            item.setErrorMessage(request.errorMessage());
+            item.setRawValue(request.rawValue());
+            dataImportErrorItemRepository.save(item);
+        }
+        writeOperationLog("IMPORT_TASK", "REPLACE_ERRORS", task.getFileName(), "SUCCESS", "count=" + safeRequests.size());
+    }
+
+    @Override
+    public void recordImportExecutionContext(Long taskId, String executionBatchNo, String callbackSource) {
+        if (!isKingbaseProfile()) {
+            return;
+        }
+        LatestAuditImportJob job = latestAuditImportJobRepository.findById(taskId)
+                .orElseThrow(() -> new BusinessException("导入任务不存在"));
+        LatestFileObject sourceFile = latestFileObjectRepository.findById(job.getSourceFileId()).orElse(null);
+        List<DataImportErrorItemResponse> errors = readLatestImportErrors(job);
+        String appStatus = parseLatestImportJobMeta(job.getResultJson())
+                .getOrDefault("appStatus", deriveImportTaskStatus(job.getStatus(), job.getSuccessRows(), job.getFailedRows()));
+        String ownerName = parseLatestImportJobMeta(job.getResultJson())
+                .getOrDefault("ownerName", resolveOperatorName(job.getStartedBy()));
+        job.setResultJson(buildImportJobResultJson(job, appStatus, ownerName, sourceFile, errors, executionBatchNo, callbackSource));
+        latestAuditImportJobRepository.save(job);
+    }
+
+    @Override
+    public ImportExecutionContext getImportExecutionContext(Long taskId) {
+        if (!isKingbaseProfile()) {
+            return null;
+        }
+        LatestAuditImportJob job = latestAuditImportJobRepository.findById(taskId)
+                .orElseThrow(() -> new BusinessException("导入任务不存在"));
+        Map<String, Object> payload = parseLatestImportJobPayload(job.getResultJson());
+        String executionBatchNo = stringValue(payload.get("executionBatchNo"));
+        String callbackSource = stringValue(payload.get("callbackSource"));
+        String lastExecutedAt = stringValue(payload.get("lastExecutedAt"));
+        if (executionBatchNo == null && callbackSource == null && lastExecutedAt == null) {
+            return null;
+        }
+        return new ImportExecutionContext(executionBatchNo, callbackSource, parseLocalDateTime(lastExecutedAt));
     }
 
     private String buildTargetDescription(Notice notice) {
@@ -1085,11 +1177,61 @@ public class AdminService implements AdminApplicationService {
         return latestFileObjectRepository.save(fileObject);
     }
 
-    private String buildImportJobResultJson(String appStatus, String ownerName) {
+    private String buildImportJobResultJson(LatestAuditImportJob job,
+                                            String appStatus,
+                                            String ownerName,
+                                            LatestFileObject sourceFile,
+                                            List<DataImportErrorItemResponse> errors) {
+        Map<String, Object> existing = parseLatestImportJobPayload(job.getResultJson());
+        return buildImportJobResultJson(
+                job,
+                appStatus,
+                ownerName,
+                sourceFile,
+                errors,
+                stringValue(existing.get("executionBatchNo")),
+                stringValue(existing.get("callbackSource"))
+        );
+    }
+
+    private String buildImportJobResultJson(LatestAuditImportJob job,
+                                            String appStatus,
+                                            String ownerName,
+                                            LatestFileObject sourceFile,
+                                            List<DataImportErrorItemResponse> errors,
+                                            String executionBatchNo,
+                                            String callbackSource) {
         Map<String, Object> payload = new java.util.LinkedHashMap<>();
+        Map<String, Object> existing = parseLatestImportJobPayload(job.getResultJson());
         payload.put("appStatus", appStatus);
         payload.put("ownerName", ownerName);
-        payload.put("errors", List.of());
+        payload.put("ownerUserId", job.getStartedBy());
+        payload.put("sourceFileId", job.getSourceFileId());
+        payload.put("sourceFileName", sourceFile == null ? null : sourceFile.getOriginalName());
+        payload.put("fileType", sourceFile == null ? "unknown" : resolveFileType(sourceFile.getOriginalName()));
+        payload.put("templateName", resolveTemplateName(job.getJobType()));
+        payload.put("templateDownloadUrl", resolveTemplateDownloadUrl(job.getJobType()));
+        payload.put("totalRows", defaultZero(job.getTotalRows()));
+        payload.put("successRows", defaultZero(job.getSuccessRows()));
+        payload.put("failedRows", defaultZero(job.getFailedRows()));
+        payload.put("progressPercent", calculateProgressPercent(defaultZero(job.getTotalRows()), defaultZero(job.getSuccessRows()), defaultZero(job.getFailedRows())));
+        payload.put("errorSummary", job.getErrorMessage());
+        payload.put("errorCount", errors.size());
+        payload.put("pendingErrorResolution", defaultZero(job.getFailedRows()) > 0
+                && ("PARTIAL_SUCCESS".equals(appStatus) || "FAILED".equals(appStatus)));
+        payload.put("startedAt", job.getStartedAt() == null ? null : job.getStartedAt().toString());
+        payload.put("finishedAt", job.getFinishedAt() == null ? null : job.getFinishedAt().toString());
+        payload.put("receiptCode", existing.getOrDefault("receiptCode",
+                "IMP-" + job.getId() + "-" + job.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))));
+        payload.put("receiptGeneratedAt", existing.getOrDefault("receiptGeneratedAt",
+                (job.getCreatedAt() == null ? LocalDateTime.now() : job.getCreatedAt()).toString()));
+        payload.put("executionBatchNo", executionBatchNo);
+        payload.put("callbackSource", callbackSource);
+        payload.put("lastExecutedAt", executionBatchNo == null && callbackSource == null
+                ? existing.get("lastExecutedAt")
+                : LocalDateTime.now().toString());
+        payload.put("updatedAt", LocalDateTime.now().toString());
+        payload.put("errors", errors.stream().map(this::toImportErrorPayload).toList());
         try {
             return objectMapper.writeValueAsString(payload);
         } catch (Exception ex) {
@@ -1097,35 +1239,34 @@ public class AdminService implements AdminApplicationService {
         }
     }
 
-    private String updateImportJobResultJson(String existing, String appStatus) {
-        Map<String, Object> payload = new java.util.LinkedHashMap<>(parseLatestImportJobPayload(existing));
-        payload.put("appStatus", appStatus);
-        try {
-            return objectMapper.writeValueAsString(payload);
-        } catch (Exception ex) {
-            return existing;
-        }
+    private String stringValue(Object value) {
+        return value == null ? null : String.valueOf(value);
     }
 
-    private String updateImportJobErrorsJson(String existing, List<DataImportErrorItemResponse> errors) {
-        Map<String, Object> payload = new java.util.LinkedHashMap<>(parseLatestImportJobPayload(existing));
-        payload.put("errors", errors.stream().map(this::toImportErrorPayload).toList());
+    private LocalDateTime parseLocalDateTime(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
         try {
-            return objectMapper.writeValueAsString(payload);
+            return LocalDateTime.parse(value);
         } catch (Exception ex) {
-            return existing;
+            return null;
         }
     }
 
     private String mapImportJobStatus(String appStatus) {
         return switch (DataImportTaskStatus.from(appStatus)) {
-            case CREATED, RUNNING -> "running";
+            case CREATED -> "created";
+            case RUNNING -> "running";
             case SUCCESS, PARTIAL_SUCCESS -> "done";
             case FAILED -> "failed";
         };
     }
 
     private String deriveImportTaskStatus(String latestStatus, Integer successRows, Integer failedRows) {
+        if ("created".equalsIgnoreCase(latestStatus)) {
+            return "CREATED";
+        }
         if ("failed".equalsIgnoreCase(latestStatus)) {
             return "FAILED";
         }
@@ -1645,6 +1786,12 @@ public class AdminService implements AdminApplicationService {
     private void validateImportTaskRows(int totalRows, int successRows, int failedRows) {
         if (successRows + failedRows > totalRows) {
             throw new BusinessException("成功行数与失败行数之和不能超过总行数");
+        }
+    }
+
+    private void validateImportErrorRequest(DataImportTaskResponse task, DataImportErrorItemCreateRequest request) {
+        if (request.rowNumber() > task.totalRows()) {
+            throw new BusinessException("错误行号不能超过导入任务总行数");
         }
     }
 

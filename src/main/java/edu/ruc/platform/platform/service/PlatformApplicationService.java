@@ -9,6 +9,7 @@ import edu.ruc.platform.platform.dto.PlatformContractResponse;
 import edu.ruc.platform.platform.dto.PlatformFileUploadResponse;
 import edu.ruc.platform.platform.dto.PlatformFileUploadRecordResponse;
 import edu.ruc.platform.platform.dto.PlatformImportErrorCreateRequest;
+import edu.ruc.platform.platform.dto.PlatformImportExecutionResultRequest;
 import edu.ruc.platform.platform.dto.PlatformImportTaskCreateRequest;
 import edu.ruc.platform.platform.dto.PlatformImportTaskReceiptResponse;
 import edu.ruc.platform.platform.dto.PlatformImportTaskUpdateRequest;
@@ -103,6 +104,8 @@ public interface PlatformApplicationService {
     PlatformImportTaskReceiptResponse getImportTaskReceipt(Long taskId);
 
     PlatformImportTaskReceiptResponse createImportError(Long taskId, PlatformImportErrorCreateRequest request);
+
+    PlatformImportTaskReceiptResponse applyImportExecutionResult(Long taskId, PlatformImportExecutionResultRequest request);
 
     PageResponse<DataImportErrorItemResponse> pageImportErrors(Long taskId, Integer rowNumber, String fieldName, String keyword, int page, int size);
 

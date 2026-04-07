@@ -42,6 +42,11 @@ public class MockAcademicWarningService implements AcademicWarningApplicationSer
         String summary = missingCredits >= 8
                 ? "存在较明显的课程模块缺口，建议优先处理核心课程补修与学分核验。"
                 : "存在课程模块缺口，建议按模块优先级逐步补齐。";
+        List<String> reviewHints = List.of(
+                "当前结果仅作为辅助提醒，不直接用于毕业资格判断。",
+                "补修、缓修、免修和课程替代仍需老师人工核验。",
+                "如近期成绩或培养方案已变更，请以最新教务审核结果为准。"
+        );
         return new AcademicAnalysisResponse(
                 studentId,
                 "张三",
@@ -60,6 +65,7 @@ public class MockAcademicWarningService implements AcademicWarningApplicationSer
                 summary + "当前培养方案口径下整体完成率约为 " + completionRate
                         + "%，该结果仅作为辅助提醒，不直接用于毕业资格判断；补修、缓修、免修和课程替代仍需老师人工核验。",
                 new AcademicRiskSummaryResponse(riskLevel, summary, true),
+                reviewHints,
                 "当前基于学生上报/基础规则生成，尚未直连完整教务数据。"
         );
     }

@@ -112,6 +112,9 @@
 - 学生档案分页、画像分页、按范围取学生，以及知识检索入口也已对齐同一套 `trim + 大小写无关关键词匹配` 规则，减少学生端/管理端联调时的空结果误判
 - 学生档案分页/统计中的 `status` 过滤已改为白名单校验，非法状态会直接返回明确错误，不再以空列表掩盖参数问题
 - 电子证明学生端相关接口已收紧为“仅学生本人发起、查询本人申请、本人撤回/重提”，管理员与辅导员保留审批链路所需的预览/历史查看能力
+- 平台导入任务已支持执行结果整批回填：可一次提交状态、成功/失败行数、错误列表，后端会先校验再整体替换错误快照，避免半更新脏数据
+- 导入执行结果回填现已补充 `executionBatchNo`、`callbackSource` 两个字段，并单独收紧为“任务负责人 / 学院管理员”可回填
+- 学业分析结果现已补充 `reviewHints`，明确返回人工复核提示，避免前端仅依赖长摘要拆语义
 
 ## 0. 平台基础能力
 
@@ -274,6 +277,7 @@
 ### 0.5 导入任务分页
 
 - `GET /api/v1/platform/import-tasks/page`
+- `POST /api/v1/platform/import-tasks/{taskId}/execution-result`
 
 导入任务状态约定：
 - `CREATED`
@@ -296,6 +300,30 @@
 - `recentErrors`
 - `receiptCode`
 - `generatedAt`
+- `executionBatchNo`
+- `callbackSource`
+
+导入执行结果回填请求字段：
+- `executionBatchNo`
+- `callbackSource`
+- `status`
+- `successRows`
+- `failedRows`
+- `errorSummary`
+- `errors`
+
+`errors` 子项字段：
+- `rowNumber`
+- `fieldName`
+- `errorMessage`
+- `rawValue`
+
+说明：
+- 该接口面向后端执行器/批处理流程，支持一次性回填导入任务的当前执行结果
+- `executionBatchNo`、`callbackSource` 为必填，结果回执会原样回传最近一次执行上下文
+- 仅任务负责人、`COLLEGE_ADMIN`、`SUPER_ADMIN` 可调用该接口回填执行结果
+- 后端会先校验错误行号与任务总行数的关系，再更新任务状态并整体替换该任务的错误快照
+- 同一任务多次查询回执时，`receiptCode` 与 `generatedAt` 保持稳定
 
 ### 0.6 审计基础接口
 
@@ -541,9 +569,11 @@
 - `PUT /api/v1/platform/import-tasks/{taskId}`
 - `GET /api/v1/platform/import-tasks/page`
 - `GET /api/v1/platform/import-tasks/{taskId}/receipt`
+- `POST /api/v1/platform/import-tasks/{taskId}/execution-result`
 - `POST /api/v1/platform/import-tasks/{taskId}/errors`
 - `GET /api/v1/platform/import-tasks/{taskId}/errors/page`
-- 平台创建导入任务时自动取当前登录人作为 owner，并支持统一状态流转、错误登记与结果回执
+- 平台创建导入任务时自动取当前登录人作为 owner，并支持统一状态流转、执行结果整批回填、错误登记与结果回执
+- 执行结果回填额外留痕最近一次 `executionBatchNo` 与 `callbackSource`，用于平台与执行器对账
 
 ### P6. 审计与日志
 

@@ -21,6 +21,7 @@ import edu.ruc.platform.admin.dto.DataImportErrorFilterRequest;
 import edu.ruc.platform.admin.dto.DataImportErrorItemResponse;
 import edu.ruc.platform.admin.dto.DataImportTaskFilterRequest;
 import edu.ruc.platform.admin.dto.DataImportTaskResponse;
+import edu.ruc.platform.admin.repository.LatestAuditImportJobRepository;
 import edu.ruc.platform.admin.repository.AdminOperationLogRepository;
 import edu.ruc.platform.admin.domain.LatestSysOperationLog;
 import edu.ruc.platform.admin.repository.LatestSysOperationLogRepository;
@@ -47,6 +48,7 @@ import edu.ruc.platform.platform.dto.PlatformContractResponse;
 import edu.ruc.platform.platform.dto.PlatformFileUploadResponse;
 import edu.ruc.platform.platform.dto.PlatformFileUploadRecordResponse;
 import edu.ruc.platform.platform.dto.PlatformImportErrorCreateRequest;
+import edu.ruc.platform.platform.dto.PlatformImportExecutionResultRequest;
 import edu.ruc.platform.platform.dto.PlatformImportTaskCreateRequest;
 import edu.ruc.platform.platform.dto.PlatformImportTaskReceiptResponse;
 import edu.ruc.platform.platform.dto.PlatformImportTaskUpdateRequest;
@@ -115,6 +117,7 @@ public class PlatformService implements PlatformApplicationService {
     private final PlatformUploadPolicyService platformUploadPolicyService;
     private final PlatformNotificationSendRecordService platformNotificationSendRecordService;
     private final StudentDataScopeService studentDataScopeService;
+    private final LatestAuditImportJobRepository latestAuditImportJobRepository;
     private final LatestSysOperationLogRepository latestSysOperationLogRepository;
     private final LatestUserRepository latestUserRepository;
     private final LatestFileObjectRepository latestFileObjectRepository;
@@ -676,6 +679,36 @@ public class PlatformService implements PlatformApplicationService {
     }
 
     @Override
+    public PlatformImportTaskReceiptResponse applyImportExecutionResult(Long taskId, PlatformImportExecutionResultRequest request) {
+        requireImportExecutionPermission(taskId);
+        validateImportExecutionErrors(taskId, request.errors());
+        validateImportTaskUpdatePayload(taskId, new PlatformImportTaskUpdateRequest(
+                request.status(),
+                request.successRows(),
+                request.failedRows(),
+                request.errorSummary()
+        ));
+        adminService.updateImportTask(taskId, new edu.ruc.platform.admin.dto.DataImportTaskUpdateRequest(
+                request.status(),
+                request.successRows(),
+                request.failedRows(),
+                request.errorSummary()
+        ));
+        adminService.recordImportExecutionContext(taskId, request.executionBatchNo(), request.callbackSource());
+        adminService.replaceImportErrors(taskId, request.errors() == null ? List.of() : request.errors().stream()
+                .map(item -> new edu.ruc.platform.admin.dto.DataImportErrorItemCreateRequest(
+                        item.rowNumber(),
+                        item.fieldName(),
+                        item.errorMessage(),
+                        item.rawValue()
+                ))
+                .toList());
+        writePlatformOperationLog("IMPORT_TASK", "EXECUTION_RESULT", "task#" + taskId, request.status(),
+                "errors=" + (request.errors() == null ? 0 : request.errors().size()));
+        return getImportTaskReceipt(taskId);
+    }
+
+    @Override
     public PageResponse<DataImportErrorItemResponse> pageImportErrors(Long taskId, Integer rowNumber, String fieldName, String keyword, int page, int size) {
         return adminService.pageImportErrors(taskId, new DataImportErrorFilterRequest(rowNumber, fieldName, keyword), page, size);
     }
@@ -973,6 +1006,18 @@ public class PlatformService implements PlatformApplicationService {
         boolean currentUserCanMaintain = canMaintainImportTask(currentUser, task);
         boolean pendingErrorResolution = task.failedRows() > 0
                 && ("PARTIAL_SUCCESS".equals(task.status()) || "FAILED".equals(task.status()));
+        Map<String, Object> meta = loadImportTaskMeta(task.id());
+        String receiptCode = parseString(meta.get("receiptCode"));
+        String generatedAtRaw = parseString(meta.get("receiptGeneratedAt"));
+        LocalDateTime generatedAt = parseDateTime(generatedAtRaw);
+        String executionBatchNo = parseString(meta.get("executionBatchNo"));
+        String callbackSource = parseString(meta.get("callbackSource"));
+        if (receiptCode == null) {
+            receiptCode = "IMP-" + task.id() + "-" + task.createdAt().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        }
+        if (generatedAt == null) {
+            generatedAt = LocalDateTime.now();
+        }
         return new PlatformImportTaskReceiptResponse(
                 task.id(),
                 task.taskType(),
@@ -996,9 +1041,47 @@ public class PlatformService implements PlatformApplicationService {
                 currentUserCanMaintain,
                 true,
                 pendingErrorResolution,
-                "IMP-" + task.id() + "-" + task.createdAt().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss")),
-                LocalDateTime.now()
+                receiptCode,
+                generatedAt,
+                executionBatchNo,
+                callbackSource
         );
+    }
+
+    private Map<String, Object> loadImportTaskMeta(Long taskId) {
+        if (!isKingbaseProfile()) {
+            return java.util.Map.of();
+        }
+        return latestAuditImportJobRepository.findById(taskId)
+                .map(item -> parseJsonObject(item.getResultJson()))
+                .orElse(java.util.Map.of());
+    }
+
+    private String parseString(Object value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private LocalDateTime parseDateTime(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(value);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private Map<String, Object> parseJsonObject(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return java.util.Map.of();
+        }
+        try {
+            return objectMapper.readValue(raw, new TypeReference<>() {
+            });
+        } catch (Exception ex) {
+            return java.util.Map.of();
+        }
     }
 
     private void requireImportTaskMaintenancePermission(Long taskId) {
@@ -1012,6 +1095,17 @@ public class PlatformService implements PlatformApplicationService {
         }
     }
 
+    private void requireImportExecutionPermission(Long taskId) {
+        AuthenticatedUser currentUser = currentUserService.requireCurrentUser();
+        DataImportTaskResponse task = adminService.listImportTasks().stream()
+                .filter(item -> item.id().equals(taskId))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("导入任务不存在"));
+        if (!canMaintainImportTask(currentUser, task)) {
+            throw new BusinessException("导入执行结果仅允许任务负责人或学院管理员回填");
+        }
+    }
+
     private boolean canMaintainImportTask(AuthenticatedUser currentUser, DataImportTaskResponse task) {
         if (currentUser == null || task == null) {
             return false;
@@ -1020,6 +1114,21 @@ public class PlatformService implements PlatformApplicationService {
             return true;
         }
         return task.owner() != null && task.owner().equals(currentUser.name());
+    }
+
+    private void validateImportExecutionErrors(Long taskId, List<PlatformImportErrorCreateRequest> errors) {
+        if (errors == null || errors.isEmpty()) {
+            return;
+        }
+        DataImportTaskResponse task = adminService.listImportTasks().stream()
+                .filter(item -> item.id().equals(taskId))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("导入任务不存在"));
+        for (PlatformImportErrorCreateRequest error : errors) {
+            if (error.rowNumber() > task.totalRows()) {
+                throw new BusinessException("错误行号不能超过导入任务总行数");
+            }
+        }
     }
 
     private String resolveImportTaskNextAction(String status, int errorCount) {

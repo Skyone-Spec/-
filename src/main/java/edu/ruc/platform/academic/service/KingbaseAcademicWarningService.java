@@ -52,6 +52,10 @@ public class KingbaseAcademicWarningService implements AcademicWarningApplicatio
                 .findFirstByStudentUserIdOrderByGeneratedAtDesc(studentId)
                 .orElse(null);
         if (report == null) {
+            List<String> reviewHints = List.of(
+                    "当前暂无有效审计报告，请先确认成绩与培养方案数据是否已同步。",
+                    "复杂学分替代、免修、补修场景仍建议人工确认。"
+            );
             return new AcademicAnalysisResponse(
                     studentId,
                     user == null ? "待补充" : user.getFullName(),
@@ -66,6 +70,7 @@ public class KingbaseAcademicWarningService implements AcademicWarningApplicatio
                     List.of(),
                     "当前暂无学业预警。",
                     new AcademicRiskSummaryResponse("LOW", "当前未发现明显缺口。", false),
+                    reviewHints,
                     "当前结果直连 aca_audit_report / aca_audit_missing / aca_course_recommendation。"
             );
         }
@@ -101,6 +106,8 @@ public class KingbaseAcademicWarningService implements AcademicWarningApplicatio
         String riskMessage = warnings.isEmpty()
                 ? "当前未发现明显缺口。"
                 : (totalMissingCredits >= 8 ? "核心学分缺口较大，建议优先补修并人工复核。" : "存在课程模块缺口，建议优先补齐缺失学分。");
+        boolean manualReviewRequired = !warnings.isEmpty() || report.getMissingModuleCount() != null && report.getMissingModuleCount() > 0;
+        List<String> reviewHints = buildReviewHints(report, transcript, warnings, totalMissingCredits);
 
         return new AcademicAnalysisResponse(
                 studentId,
@@ -121,11 +128,12 @@ public class KingbaseAcademicWarningService implements AcademicWarningApplicatio
                 totalMissingCredits,
                 completionRate,
                 warnings.stream().map(AcademicWarningResponse::moduleName).toList(),
-                warnings.isEmpty() ? "当前暂无学业预警。" : riskMessage + " 当前培养方案口径下整体完成率约为 " + completionRate + "%。",
                 warnings.isEmpty()
-                        ? new AcademicRiskSummaryResponse(riskLevel, riskMessage, false)
-                        : new AcademicRiskSummaryResponse(riskLevel, riskMessage, true),
-                "当前结果直连 aca_audit_report / aca_audit_missing / aca_course_recommendation。"
+                        ? "当前暂无学业预警。已按培养方案审计结果生成概览，复杂学分替代、免修、补修场景仍建议人工确认。"
+                        : riskMessage + " 当前培养方案口径下整体完成率约为 " + completionRate + "%，复杂学分替代与补修场景需结合人工复核。",
+                new AcademicRiskSummaryResponse(riskLevel, riskMessage, manualReviewRequired),
+                reviewHints,
+                buildDataSourceNote(report, transcript)
         );
     }
 
@@ -158,5 +166,39 @@ public class KingbaseAcademicWarningService implements AcademicWarningApplicatio
 
     private int defaultZero(Integer value) {
         return value == null ? 0 : value;
+    }
+
+    private String buildDataSourceNote(LatestAcademicAuditReport report, LatestAcademicTranscript transcript) {
+        String generatedAt = report.getGeneratedAt() == null ? "未知时间" : report.getGeneratedAt().toString();
+        String transcriptParsedAt = transcript == null || transcript.getParsedAt() == null
+                ? "暂无成绩解析时间"
+                : transcript.getParsedAt().toString();
+        return "当前结果直连 aca_audit_report / aca_audit_missing / aca_course_recommendation，审计生成时间为 "
+                + generatedAt + "，最近成绩解析时间为 " + transcriptParsedAt
+                + "。涉及补修、免修、课程替代等复杂规则时，仍需人工复核。";
+    }
+
+    private List<String> buildReviewHints(LatestAcademicAuditReport report,
+                                          LatestAcademicTranscript transcript,
+                                          List<AcademicWarningResponse> warnings,
+                                          int totalMissingCredits) {
+        List<String> hints = new java.util.ArrayList<>();
+        hints.add("当前结果仅作为培养方案审计辅助视图，不直接用于毕业资格最终判断。");
+        if (transcript == null || transcript.getParsedAt() == null) {
+            hints.add("最近成绩解析时间缺失，请先确认成绩单是否已完成导入与解析。");
+        }
+        if (report.getMissingModuleCount() != null && report.getMissingModuleCount() > 0) {
+            hints.add("存在培养方案缺口模块，建议逐项对照学院培养方案与个人修读记录复核。");
+        }
+        if (warnings.stream().anyMatch(item -> item.recommendedCourses() == null || item.recommendedCourses().isBlank())) {
+            hints.add("部分缺口模块暂无推荐课程，请联系老师确认可替代课程或补修安排。");
+        }
+        if (totalMissingCredits >= 8) {
+            hints.add("当前缺失学分较高，建议尽快与辅导员或教务老师确认补修优先级。");
+        }
+        if (hints.size() == 1) {
+            hints.add("涉及补修、免修、课程替代等复杂规则时，仍需人工复核。");
+        }
+        return hints;
     }
 }

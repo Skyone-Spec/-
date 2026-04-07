@@ -29,6 +29,8 @@ public record PlatformImportTaskReceiptResponse(
         boolean ownerOnlyMaintenance,
         boolean pendingErrorResolution,
         String receiptCode,
-        LocalDateTime generatedAt
+        LocalDateTime generatedAt,
+        String executionBatchNo,
+        String callbackSource
 ) {
 }

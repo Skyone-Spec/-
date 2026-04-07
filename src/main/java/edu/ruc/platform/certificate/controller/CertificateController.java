@@ -62,7 +62,7 @@ public class CertificateController {
 
     private void requireCertificateOwner(Long studentId) {
         AuthenticatedUser user = currentUserService.requireCurrentUser();
-        if (!user.userId().equals(studentId)) {
+        if (user.studentId() == null || !user.studentId().equals(studentId)) {
             throw new BusinessException("证明申请仅支持学生本人操作");
         }
     }

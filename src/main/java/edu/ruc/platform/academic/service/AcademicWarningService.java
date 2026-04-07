@@ -48,6 +48,7 @@ public class AcademicWarningService implements AcademicWarningApplicationService
         String riskMessage = warnings.isEmpty()
                 ? "当前未发现明显缺口。"
                 : (missingCredits >= 8 ? "核心学分缺口较大，建议优先补修并人工复核。" : "存在课程模块缺口，建议优先补齐缺失学分。");
+        List<String> reviewHints = buildReviewHints(warnings.isEmpty(), missingCredits);
         return new AcademicAnalysisResponse(
                 studentId,
                 student == null ? "待补充" : student.getName(),
@@ -74,6 +75,7 @@ public class AcademicWarningService implements AcademicWarningApplicationService
                 warnings.isEmpty()
                         ? new AcademicRiskSummaryResponse(riskLevel, riskMessage, false)
                         : new AcademicRiskSummaryResponse(riskLevel, riskMessage, true),
+                reviewHints,
                 "当前未直连完整教务系统，复杂规则场景需人工确认。"
         );
     }
@@ -98,5 +100,17 @@ public class AcademicWarningService implements AcademicWarningApplicationService
 
     private int defaultZero(Integer value) {
         return value == null ? 0 : value;
+    }
+
+    private List<String> buildReviewHints(boolean noWarnings, int missingCredits) {
+        List<String> hints = new java.util.ArrayList<>();
+        hints.add("当前结果仅作为辅助提醒，不直接用于毕业资格判断。");
+        hints.add("补修、免修、缓修和课程替代场景需结合老师人工复核。");
+        if (noWarnings) {
+            hints.add("即使当前未发现明显缺口，遇到培养方案变更时仍建议再次核对。");
+        } else if (missingCredits >= 8) {
+            hints.add("当前缺失学分较高，建议优先联系辅导员或教务老师确认补修路径。");
+        }
+        return hints;
     }
 }

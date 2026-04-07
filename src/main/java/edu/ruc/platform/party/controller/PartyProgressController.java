@@ -1,6 +1,8 @@
 package edu.ruc.platform.party.controller;
 
+import edu.ruc.platform.auth.service.CurrentUserService;
 import edu.ruc.platform.common.api.ApiResponse;
+import edu.ruc.platform.common.enums.RoleType;
 import edu.ruc.platform.party.dto.PartyProgressResponse;
 import edu.ruc.platform.party.dto.PartyStageTimelineResponse;
 import edu.ruc.platform.party.dto.ReminderResponse;
@@ -22,19 +24,23 @@ import java.util.List;
 public class PartyProgressController {
 
     private final PartyProgressApplicationService partyProgressService;
+    private final CurrentUserService currentUserService;
 
     @GetMapping("/{studentId}")
     public ApiResponse<PartyProgressResponse> getByStudentId(@Positive(message = "学生ID必须大于 0") @PathVariable Long studentId) {
+        currentUserService.requireStudentAccess(studentId, RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
         return ApiResponse.success(partyProgressService.getProgress(studentId));
     }
 
     @GetMapping("/{studentId}/timeline")
     public ApiResponse<PartyStageTimelineResponse> getTimeline(@Positive(message = "学生ID必须大于 0") @PathVariable Long studentId) {
+        currentUserService.requireStudentAccess(studentId, RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
         return ApiResponse.success(partyProgressService.getTimeline(studentId));
     }
 
     @GetMapping("/{studentId}/reminders")
     public ApiResponse<List<ReminderResponse>> listReminders(@Positive(message = "学生ID必须大于 0") @PathVariable Long studentId) {
+        currentUserService.requireStudentAccess(studentId, RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
         return ApiResponse.success(partyProgressService.listReminders(studentId));
     }
 }

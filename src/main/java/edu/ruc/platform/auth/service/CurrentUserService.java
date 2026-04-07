@@ -37,7 +37,7 @@ public class CurrentUserService {
 
     public AuthenticatedUser requireSelfOrAdmin(Long studentId, RoleType... adminRoles) {
         AuthenticatedUser user = requireCurrentUser();
-        if (user.userId() != null && user.userId().equals(studentId)) {
+        if (user.studentId() != null && user.studentId().equals(studentId)) {
             return user;
         }
         Set<String> allowedRoles = Set.of(adminRoles).stream().map(Enum::name).collect(java.util.stream.Collectors.toSet());
@@ -49,7 +49,7 @@ public class CurrentUserService {
 
     public AuthenticatedUser requireStudentAccess(Long studentId, RoleType... adminRoles) {
         AuthenticatedUser user = requireCurrentUser();
-        if (user.userId() != null && user.userId().equals(studentId)) {
+        if (user.studentId() != null && user.studentId().equals(studentId)) {
             return user;
         }
         Set<String> allowedRoles = Set.of(adminRoles).stream().map(Enum::name).collect(java.util.stream.Collectors.toSet());

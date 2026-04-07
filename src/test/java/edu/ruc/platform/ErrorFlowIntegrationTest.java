@@ -338,6 +338,31 @@ class ErrorFlowIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message", containsString("SUCCESS 状态下")));
+
+        mockMvc.perform(post("/api/v1/platform/import-tasks/2/execution-result")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "executionBatchNo": "batch-20260328-err-001",
+                                  "callbackSource": "IMPORT_WORKER",
+                                  "status": "FAILED",
+                                  "successRows": 0,
+                                  "failedRows": 28,
+                                  "errorSummary": "导入执行失败",
+                                  "errors": [
+                                    {
+                                      "rowNumber": 99,
+                                      "fieldName": "title",
+                                      "errorMessage": "超过总行数",
+                                      "rawValue": "bad"
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("错误行号不能超过导入任务总行数"));
     }
 
     @Test

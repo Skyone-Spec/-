@@ -33,6 +33,9 @@ import java.util.List;
 
 public interface AdminApplicationService {
 
+    record ImportExecutionContext(String executionBatchNo, String callbackSource, java.time.LocalDateTime recordedAt) {
+    }
+
     List<TargetedNoticeResponse> listNotices();
 
     PageResponse<TargetedNoticeResponse> pageNotices(AdminNoticeFilterRequest request, int page, int size);
@@ -92,4 +95,10 @@ public interface AdminApplicationService {
     PageResponse<DataImportErrorItemResponse> pageImportErrors(Long taskId, DataImportErrorFilterRequest request, int page, int size);
 
     DataImportErrorItemResponse createImportError(Long taskId, DataImportErrorItemCreateRequest request);
+
+    void replaceImportErrors(Long taskId, List<DataImportErrorItemCreateRequest> requests);
+
+    void recordImportExecutionContext(Long taskId, String executionBatchNo, String callbackSource);
+
+    ImportExecutionContext getImportExecutionContext(Long taskId);
 }

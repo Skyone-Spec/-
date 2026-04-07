@@ -384,7 +384,7 @@ class PlatformCapabilityIntegrationTest {
                 .andExpect(jsonPath("$.data.page").value(0))
                 .andExpect(jsonPath("$.data.size").value(1));
 
-        mockMvc.perform(post("/api/v1/platform/import-tasks")
+        String createdImportTaskResponse = mockMvc.perform(post("/api/v1/platform/import-tasks")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -411,7 +411,12 @@ class PlatformCapabilityIntegrationTest {
                 .andExpect(jsonPath("$.data.currentUserCanMaintain").value(true))
                 .andExpect(jsonPath("$.data.ownerOnlyMaintenance").value(true))
                 .andExpect(jsonPath("$.data.pendingErrorResolution").value(false))
-                .andExpect(jsonPath("$.data.receiptCode").isString());
+                .andExpect(jsonPath("$.data.receiptCode").isString())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long createdImportTaskId = objectMapper.readTree(createdImportTaskResponse).path("data").path("taskId").asLong();
 
         mockMvc.perform(put("/api/v1/platform/import-tasks/2")
                         .header("Authorization", "Bearer " + adminToken)
@@ -497,6 +502,43 @@ class PlatformCapabilityIntegrationTest {
                 .andExpect(jsonPath("$.data.currentUserCanMaintain").value(true))
                 .andExpect(jsonPath("$.data.ownerOnlyMaintenance").value(true))
                 .andExpect(jsonPath("$.data.pendingErrorResolution").value(true));
+
+        mockMvc.perform(post("/api/v1/platform/import-tasks/{taskId}/execution-result", createdImportTaskId)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "executionBatchNo": "batch-20260328-001",
+                                  "callbackSource": "IMPORT_WORKER",
+                                  "status": "FAILED",
+                                  "successRows": 0,
+                                  "failedRows": 12,
+                                  "errorSummary": "模板列映射失败",
+                                  "errors": [
+                                    {
+                                      "rowNumber": 1,
+                                      "fieldName": "title",
+                                      "errorMessage": "标题列缺失",
+                                      "rawValue": ""
+                                    },
+                                    {
+                                      "rowNumber": 2,
+                                      "fieldName": "officialUrl",
+                                      "errorMessage": "链接格式不正确",
+                                      "rawValue": "bad-url"
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.taskId").value(createdImportTaskId))
+                .andExpect(jsonPath("$.data.status").value("FAILED"))
+                .andExpect(jsonPath("$.data.errorCount").value(2))
+                .andExpect(jsonPath("$.data.pendingErrorResolution").value(true))
+                .andExpect(jsonPath("$.data.canRetry").value(true))
+                .andExpect(jsonPath("$.data.recentErrors[0].rowNumber").value(1))
+                .andExpect(jsonPath("$.data.executionBatchNo").value("batch-20260328-001"))
+                .andExpect(jsonPath("$.data.callbackSource").value("IMPORT_WORKER"));
 
         mockMvc.perform(get("/api/v1/platform/audit/admin-operation-logs/page")
                         .param("page", "0")
@@ -614,6 +656,23 @@ class PlatformCapabilityIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").value("当前账号仅可维护本人创建的导入任务"));
+
+        mockMvc.perform(post("/api/v1/platform/import-tasks/1/execution-result")
+                        .header("Authorization", "Bearer " + counselorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "executionBatchNo": "batch-20260328-002",
+                                  "callbackSource": "IMPORT_WORKER",
+                                  "status": "FAILED",
+                                  "successRows": 0,
+                                  "failedRows": 1,
+                                  "errorSummary": "尝试越权回填"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("导入执行结果仅允许任务负责人或学院管理员回填"));
     }
 
     private String loginAndExtractToken(String username, String password) throws Exception {

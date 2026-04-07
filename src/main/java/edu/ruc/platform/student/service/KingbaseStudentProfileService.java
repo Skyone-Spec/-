@@ -85,7 +85,10 @@ public class KingbaseStudentProfileService implements StudentProfileApplicationS
     @Override
     public StudentProfileResponse currentStudentProfile() {
         AuthenticatedUser user = currentUserService.requireCurrentUser();
-        return buildProfile(user.userId())
+        if (user.studentId() == null) {
+            throw new BusinessException("当前账号未关联学生档案");
+        }
+        return buildProfile(user.studentId())
                 .map(item -> toResponse(item, user))
                 .orElseThrow(() -> new BusinessException("当前学生信息不存在"));
     }

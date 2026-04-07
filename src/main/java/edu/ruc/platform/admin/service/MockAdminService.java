@@ -42,8 +42,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -72,6 +74,7 @@ public class MockAdminService implements AdminApplicationService {
             new DataImportErrorItemResponse(81L, 2L, 7, "title", "标题为空", null, LocalDateTime.of(2026, 3, 23, 9, 5)),
             new DataImportErrorItemResponse(82L, 2L, 12, "officialUrl", "URL 格式不合法", "htp://bad-url", LocalDateTime.of(2026, 3, 23, 9, 6))
     ));
+    private final Map<Long, ImportExecutionContext> importExecutionContexts = new HashMap<>();
     private final List<AdvisorScopeBindingResponse> advisorScopes = new ArrayList<>(List.of(
             new AdvisorScopeBindingResponse(1L, "advisor01", "王老师", "2023级", "计科一班", 10001L),
             new AdvisorScopeBindingResponse(2L, "advisor02", "赵老师", "2023级", "计科二班", 10002L)
@@ -555,6 +558,48 @@ public class MockAdminService implements AdminApplicationService {
         importErrors.add(response);
         writeOperationLog("IMPORT_TASK", "ADD_ERROR", task.fileName(), "SUCCESS", "row=" + request.rowNumber());
         return response;
+    }
+
+    @Override
+    public void replaceImportErrors(Long taskId, List<DataImportErrorItemCreateRequest> requests) {
+        initializeImportTasks();
+        DataImportTaskResponse task = importTasks.stream()
+                .filter(item -> item.id().equals(taskId))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("导入任务不存在: " + taskId));
+        importErrors.removeIf(item -> item.taskId().equals(taskId));
+        List<DataImportErrorItemCreateRequest> safeRequests = requests == null ? List.of() : requests;
+        for (DataImportErrorItemCreateRequest request : safeRequests) {
+            if (request.rowNumber() > task.totalRows()) {
+                throw new BusinessException("错误行号不能超过导入任务总行数");
+            }
+            importErrors.add(new DataImportErrorItemResponse(
+                    importErrorIdGenerator.incrementAndGet(),
+                    taskId,
+                    request.rowNumber(),
+                    request.fieldName(),
+                    request.errorMessage(),
+                    request.rawValue(),
+                    LocalDateTime.now()
+            ));
+        }
+        writeOperationLog("IMPORT_TASK", "REPLACE_ERRORS", task.fileName(), "SUCCESS", "count=" + safeRequests.size());
+    }
+
+    @Override
+    public void recordImportExecutionContext(Long taskId, String executionBatchNo, String callbackSource) {
+        initializeImportTasks();
+        boolean exists = importTasks.stream().anyMatch(item -> item.id().equals(taskId));
+        if (!exists) {
+            throw new BusinessException("导入任务不存在: " + taskId);
+        }
+        importExecutionContexts.put(taskId, new ImportExecutionContext(executionBatchNo, callbackSource, LocalDateTime.now()));
+    }
+
+    @Override
+    public ImportExecutionContext getImportExecutionContext(Long taskId) {
+        initializeImportTasks();
+        return importExecutionContexts.get(taskId);
     }
 
     private void initializeKnowledgeItems() {

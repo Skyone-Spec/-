@@ -79,7 +79,10 @@ public class StudentProfileService implements StudentProfileApplicationService {
     @Override
     public StudentProfileResponse currentStudentProfile() {
         AuthenticatedUser user = currentUserService.requireCurrentUser();
-        return studentProfileRepository.findById(user.userId())
+        if (user.studentId() == null) {
+            throw new BusinessException("当前账号未关联学生档案");
+        }
+        return studentProfileRepository.findById(user.studentId())
                 .map(item -> toResponse(item, user))
                 .orElseThrow(() -> new BusinessException("当前学生信息不存在"));
     }

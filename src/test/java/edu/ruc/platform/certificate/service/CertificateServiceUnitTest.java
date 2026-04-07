@@ -59,6 +59,7 @@ class CertificateServiceUnitTest {
         when(certificateRequestRepository.findById(1002L)).thenReturn(Optional.of(request));
         when(currentUserService.requireCurrentUser()).thenReturn(new AuthenticatedUser(
                 20001L,
+                null,
                 "teacher01",
                 "COUNSELOR",
                 null,

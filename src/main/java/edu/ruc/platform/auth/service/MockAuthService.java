@@ -44,23 +44,23 @@ public class MockAuthService implements AuthApplicationService {
         }
         if ("admin".equals(request.username()) && defaultPassword.equals(request.password())) {
             mockPlatformService.clearLoginFailures(request.username());
-            return issueToken(new AuthenticatedUser(1L, "admin", "SUPER_ADMIN", null, "系统管理员", null, null), platformUser != null && Boolean.TRUE.equals(platformUser.passwordResetRequired()));
+            return issueToken(new AuthenticatedUser(1L, null, "admin", "SUPER_ADMIN", null, "系统管理员", null, null), platformUser != null && Boolean.TRUE.equals(platformUser.passwordResetRequired()));
         }
         if ("teacher01".equals(request.username()) && defaultPassword.equals(request.password())) {
             mockPlatformService.clearLoginFailures(request.username());
-            return issueToken(new AuthenticatedUser(20001L, "teacher01", "COUNSELOR", null, "胡浩老师", null, null), platformUser != null && Boolean.TRUE.equals(platformUser.passwordResetRequired()));
+            return issueToken(new AuthenticatedUser(20001L, null, "teacher01", "COUNSELOR", null, "胡浩老师", null, null), platformUser != null && Boolean.TRUE.equals(platformUser.passwordResetRequired()));
         }
         if ("advisor01".equals(request.username()) && defaultPassword.equals(request.password())) {
             mockPlatformService.clearLoginFailures(request.username());
-            return issueToken(new AuthenticatedUser(20002L, "advisor01", "CLASS_ADVISOR", null, "王老师", null, "2023级"), platformUser != null && Boolean.TRUE.equals(platformUser.passwordResetRequired()));
+            return issueToken(new AuthenticatedUser(20002L, null, "advisor01", "CLASS_ADVISOR", null, "王老师", null, "2023级"), platformUser != null && Boolean.TRUE.equals(platformUser.passwordResetRequired()));
         }
         if ("2023100002".equals(request.username()) && defaultPassword.equals(request.password())) {
             mockPlatformService.clearLoginFailures(request.username());
-            return issueToken(new AuthenticatedUser(10002L, "2023100002", "LEAGUE_SECRETARY", "2023100002", "李四", "计算机类", "2023级"), platformUser != null && Boolean.TRUE.equals(platformUser.passwordResetRequired()));
+            return issueToken(new AuthenticatedUser(10002L, 10002L, "2023100002", "LEAGUE_SECRETARY", "2023100002", "李四", "计算机类", "2023级"), platformUser != null && Boolean.TRUE.equals(platformUser.passwordResetRequired()));
         }
         if ("2023100001".equals(request.username()) && defaultPassword.equals(request.password())) {
             mockPlatformService.clearLoginFailures(request.username());
-            return issueToken(new AuthenticatedUser(10001L, "2023100001", "STUDENT", "2023100001", "张三", "计算机类", "2023级"), platformUser != null && Boolean.TRUE.equals(platformUser.passwordResetRequired()));
+            return issueToken(new AuthenticatedUser(10001L, 10001L, "2023100001", "STUDENT", "2023100001", "张三", "计算机类", "2023级"), platformUser != null && Boolean.TRUE.equals(platformUser.passwordResetRequired()));
         }
         if (platformUser != null) {
             mockPlatformService.markLoginFailure(request.username(), platformSecurityPolicyService.maxFailedLoginAttempts());
@@ -78,7 +78,7 @@ public class MockAuthService implements AuthApplicationService {
         if (request.code().isBlank()) {
             throw new BusinessException("微信登录 code 无效");
         }
-        return issueToken(new AuthenticatedUser(10001L, "2023100001", "STUDENT", "2023100001", "张三", "计算机类", "2023级"), false);
+        return issueToken(new AuthenticatedUser(10001L, 10001L, "2023100001", "STUDENT", "2023100001", "张三", "计算机类", "2023级"), false);
     }
 
     @Override

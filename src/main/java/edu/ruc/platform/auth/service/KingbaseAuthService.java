@@ -158,6 +158,7 @@ public class KingbaseAuthService implements AuthApplicationService {
     private AuthenticatedUser buildAuthenticatedUser(LatestUser latestUser, RoleType role, LatestStudentExt ext) {
         return new AuthenticatedUser(
                 latestUser.getId(),
+                latestUser.getId(), // 在 Kingbase 模式下，目前账号 ID 也是学生 ID（根据 bridge 脚本逻辑）
                 latestUser.getStudentNo(),
                 role.name(),
                 latestUser.getStudentNo(),

@@ -16,6 +16,7 @@ public record AcademicAnalysisResponse(
         List<String> highlightedModules,
         String summary,
         AcademicRiskSummaryResponse riskSummary,
+        List<String> reviewHints,
         String dataSourceNote
 ) {
 }

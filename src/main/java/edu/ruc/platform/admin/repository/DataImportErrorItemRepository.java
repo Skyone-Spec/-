@@ -8,4 +8,6 @@ import java.util.List;
 public interface DataImportErrorItemRepository extends JpaRepository<DataImportErrorItem, Long> {
 
     List<DataImportErrorItem> findByTaskIdOrderByRowNumberAscCreatedAtAsc(Long taskId);
+
+    void deleteByTaskId(Long taskId);
 }

@@ -114,6 +114,7 @@ public class AuthService implements AuthApplicationService {
         if (studentProfile == null) {
             return new AuthenticatedUser(
                     user.getId(),
+                    null,
                     user.getUsername(),
                     user.getRole().name(),
                     null,
@@ -124,6 +125,7 @@ public class AuthService implements AuthApplicationService {
         }
         return new AuthenticatedUser(
                 user.getId(),
+                studentProfile.getId(),
                 user.getUsername(),
                 user.getRole().name(),
                 studentProfile.getStudentNo(),

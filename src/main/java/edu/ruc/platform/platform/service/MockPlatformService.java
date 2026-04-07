@@ -29,6 +29,7 @@ import edu.ruc.platform.platform.dto.PlatformContractResponse;
 import edu.ruc.platform.platform.dto.PlatformFileUploadResponse;
 import edu.ruc.platform.platform.dto.PlatformFileUploadRecordResponse;
 import edu.ruc.platform.platform.dto.PlatformImportErrorCreateRequest;
+import edu.ruc.platform.platform.dto.PlatformImportExecutionResultRequest;
 import edu.ruc.platform.platform.dto.PlatformImportTaskCreateRequest;
 import edu.ruc.platform.platform.dto.PlatformImportTaskReceiptResponse;
 import edu.ruc.platform.platform.dto.PlatformImportTaskUpdateRequest;
@@ -720,6 +721,34 @@ public class MockPlatformService implements PlatformApplicationService {
         return getImportTaskReceipt(taskId);
     }
 
+    @Override
+    public PlatformImportTaskReceiptResponse applyImportExecutionResult(Long taskId, PlatformImportExecutionResultRequest request) {
+        requireImportExecutionPermission(taskId);
+        validateImportExecutionErrors(taskId, request.errors());
+        validateImportTaskUpdatePayload(taskId, new PlatformImportTaskUpdateRequest(
+                request.status(),
+                request.successRows(),
+                request.failedRows(),
+                request.errorSummary()
+        ));
+        adminService.updateImportTask(taskId, new edu.ruc.platform.admin.dto.DataImportTaskUpdateRequest(
+                request.status(),
+                request.successRows(),
+                request.failedRows(),
+                request.errorSummary()
+        ));
+        adminService.recordImportExecutionContext(taskId, request.executionBatchNo(), request.callbackSource());
+        adminService.replaceImportErrors(taskId, request.errors() == null ? List.of() : request.errors().stream()
+                .map(item -> new edu.ruc.platform.admin.dto.DataImportErrorItemCreateRequest(
+                        item.rowNumber(),
+                        item.fieldName(),
+                        item.errorMessage(),
+                        item.rawValue()
+                ))
+                .toList());
+        return getImportTaskReceipt(taskId);
+    }
+
     private void requireImportTaskMaintenancePermission(Long taskId) {
         AuthenticatedUser currentUser = currentUserService.requireCurrentUser();
         DataImportTaskResponse task = adminService.listImportTasks().stream()
@@ -728,6 +757,17 @@ public class MockPlatformService implements PlatformApplicationService {
                 .orElseThrow(() -> new BusinessException("导入任务不存在"));
         if (!canMaintainImportTask(currentUser, task)) {
             throw new BusinessException("当前账号仅可维护本人创建的导入任务");
+        }
+    }
+
+    private void requireImportExecutionPermission(Long taskId) {
+        AuthenticatedUser currentUser = currentUserService.requireCurrentUser();
+        DataImportTaskResponse task = adminService.listImportTasks().stream()
+                .filter(item -> item.id().equals(taskId))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("导入任务不存在"));
+        if (!canMaintainImportTask(currentUser, task)) {
+            throw new BusinessException("导入执行结果仅允许任务负责人或学院管理员回填");
         }
     }
 
@@ -980,6 +1020,7 @@ public class MockPlatformService implements PlatformApplicationService {
         boolean currentUserCanMaintain = canMaintainImportTask(currentUser, task);
         boolean pendingErrorResolution = task.failedRows() > 0
                 && ("PARTIAL_SUCCESS".equals(task.status()) || "FAILED".equals(task.status()));
+        AdminApplicationService.ImportExecutionContext executionContext = adminService.getImportExecutionContext(task.id());
         return new PlatformImportTaskReceiptResponse(
                 task.id(),
                 task.taskType(),
@@ -1004,7 +1045,9 @@ public class MockPlatformService implements PlatformApplicationService {
                 true,
                 pendingErrorResolution,
                 "IMP-" + task.id() + "-" + task.createdAt().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss")),
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                executionContext == null ? null : executionContext.executionBatchNo(),
+                executionContext == null ? null : executionContext.callbackSource()
         );
     }
 
@@ -1016,6 +1059,21 @@ public class MockPlatformService implements PlatformApplicationService {
             return true;
         }
         return task.owner() != null && task.owner().equals(currentUser.name());
+    }
+
+    private void validateImportExecutionErrors(Long taskId, List<PlatformImportErrorCreateRequest> errors) {
+        if (errors == null || errors.isEmpty()) {
+            return;
+        }
+        DataImportTaskResponse task = adminService.listImportTasks().stream()
+                .filter(item -> item.id().equals(taskId))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("导入任务不存在"));
+        for (PlatformImportErrorCreateRequest error : errors) {
+            if (error.rowNumber() > task.totalRows()) {
+                throw new BusinessException("错误行号不能超过导入任务总行数");
+            }
+        }
     }
 
     private String resolveImportTaskNextAction(String status, int errorCount) {

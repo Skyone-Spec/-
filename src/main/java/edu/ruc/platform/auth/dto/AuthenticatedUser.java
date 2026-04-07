@@ -2,6 +2,7 @@ package edu.ruc.platform.auth.dto;
 
 public record AuthenticatedUser(
         Long userId,
+        Long studentId,
         String username,
         String role,
         String studentNo,
@@ -10,6 +11,6 @@ public record AuthenticatedUser(
         String grade
 ) {
     public UserProfileResponse toProfileResponse() {
-        return new UserProfileResponse(userId, username, role, studentNo, name, major, grade);
+        return new UserProfileResponse(userId, studentId, username, role, studentNo, name, major, grade);
     }
 }

@@ -21,11 +21,11 @@ import java.util.Map;
 public class MockDataStore {
 
     private final Map<String, UserProfileResponse> users = Map.of(
-            "2023100001", new UserProfileResponse(10001L, "2023100001", "STUDENT", "2023100001", "张三", "计算机类", "2023级"),
-            "2023100002", new UserProfileResponse(10002L, "2023100002", "LEAGUE_SECRETARY", "2023100002", "李四", "计算机类", "2023级"),
-            "teacher01", new UserProfileResponse(20001L, "teacher01", "COUNSELOR", null, "胡浩老师", null, null),
-            "advisor01", new UserProfileResponse(20002L, "advisor01", "CLASS_ADVISOR", null, "王老师", null, "2023级"),
-            "admin", new UserProfileResponse(1L, "admin", "SUPER_ADMIN", null, "系统管理员", null, null)
+            "2023100001", new UserProfileResponse(10001L, 10001L, "2023100001", "STUDENT", "2023100001", "张三", "计算机类", "2023级"),
+            "2023100002", new UserProfileResponse(10002L, 10002L, "2023100002", "LEAGUE_SECRETARY", "2023100002", "李四", "计算机类", "2023级"),
+            "teacher01", new UserProfileResponse(20001L, null, "teacher01", "COUNSELOR", null, "胡浩老师", null, null),
+            "advisor01", new UserProfileResponse(20002L, null, "advisor01", "CLASS_ADVISOR", null, "王老师", null, "2023级"),
+            "admin", new UserProfileResponse(1L, null, "admin", "SUPER_ADMIN", null, "系统管理员", null, null)
     );
 
     public LoginResponse adminLogin() {
