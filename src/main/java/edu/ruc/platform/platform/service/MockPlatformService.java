@@ -68,6 +68,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
@@ -87,6 +89,7 @@ public class MockPlatformService implements PlatformApplicationService {
     private final AtomicLong userIdGenerator = new AtomicLong(30000);
     private final AtomicLong loginAuditIdGenerator = new AtomicLong(5000);
     private final AtomicLong sessionIdGenerator = new AtomicLong(8000);
+    private final Map<String, String> userPasswords = new ConcurrentHashMap<>();
     private final List<PlatformFileUploadRecordResponse> uploadRecords = new ArrayList<>();
     private final List<PlatformLoginAuditLogResponse> loginAuditLogs = new ArrayList<>(List.of(
             new PlatformLoginAuditLogResponse(5001L, 1L, "admin", "SUPER_ADMIN", "LOGIN", "SUCCESS", null, LocalDateTime.of(2026, 3, 24, 9, 0)),
@@ -207,8 +210,10 @@ public class MockPlatformService implements PlatformApplicationService {
                 new PlatformRoleResponse(RoleType.COLLEGE_ADMIN.name(), "学院管理员", List.of(DataScopeType.ALL.name())),
                 new PlatformRoleResponse(RoleType.COUNSELOR.name(), "辅导员", List.of(DataScopeType.ALL.name())),
                 new PlatformRoleResponse(RoleType.CLASS_ADVISOR.name(), "班主任", List.of(DataScopeType.GRADE.name(), DataScopeType.CLASS.name())),
+                new PlatformRoleResponse(RoleType.CLASS_LEADER.name(), "班长", List.of(DataScopeType.GRADE.name(), DataScopeType.SELF.name())),
                 new PlatformRoleResponse(RoleType.LEAGUE_SECRETARY.name(), "团支书", List.of(DataScopeType.GRADE.name(), DataScopeType.SELF.name())),
-                new PlatformRoleResponse(RoleType.STUDENT.name(), "普通学生", List.of(DataScopeType.SELF.name()))
+                new PlatformRoleResponse(RoleType.STUDENT.name(), "普通学生", List.of(DataScopeType.SELF.name())),
+                new PlatformRoleResponse(RoleType.ASSISTANT.name(), "学生助理", List.of(DataScopeType.SELF.name()))
         );
     }
 
@@ -271,6 +276,7 @@ public class MockPlatformService implements PlatformApplicationService {
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
+        userPasswords.put(created.username(), resolvePassword(request.rawPassword()));
         users.add(0, created);
         return created;
     }
@@ -299,6 +305,10 @@ public class MockPlatformService implements PlatformApplicationService {
                         LocalDateTime.now()
                 );
                 users.set(i, updated);
+                transferStoredPassword(item.username(), updated.username());
+                if (request.rawPassword() != null && !request.rawPassword().isBlank()) {
+                    userPasswords.put(updated.username(), request.rawPassword());
+                }
                 if (!Boolean.TRUE.equals(updated.enabled())) {
                     deactivateSessionsByUserId(updated.userId());
                 }
@@ -371,7 +381,7 @@ public class MockPlatformService implements PlatformApplicationService {
     public PlatformUserPasswordResetResponse resetPassword(Long userId, PlatformUserPasswordResetRequest request) {
         PlatformUserDetailResponse user = getUser(userId);
         String temporaryPassword = request == null || request.newPassword() == null || request.newPassword().isBlank()
-                ? "123456"
+                ? platformSecurityPolicyService.defaultPassword()
                 : request.newPassword();
         validatePassword(temporaryPassword, "重置密码长度不能少于 6 位");
         for (int i = 0; i < users.size(); i++) {
@@ -393,6 +403,7 @@ public class MockPlatformService implements PlatformApplicationService {
                         item.createdAt(),
                         LocalDateTime.now()
                 ));
+                userPasswords.put(item.username(), temporaryPassword);
                 break;
             }
         }
@@ -466,6 +477,36 @@ public class MockPlatformService implements PlatformApplicationService {
                 .filter(item -> item.username().equals(username))
                 .findFirst()
                 .orElse(null);
+    }
+
+    public boolean passwordMatches(String username, String password) {
+        PlatformUserDetailResponse user = findUserByUsername(username);
+        if (user == null) {
+            return false;
+        }
+        String storedPassword = userPasswords.get(username);
+        if (storedPassword != null) {
+            return storedPassword.equals(password);
+        }
+        return platformSecurityPolicyService.defaultPassword().equals(password);
+    }
+
+    public AuthenticatedUser buildAuthenticatedUser(String username) {
+        PlatformUserDetailResponse user = users.stream()
+                .filter(item -> item.username().equals(username))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("平台用户不存在"));
+        Long studentId = resolveStudentId(user);
+        return new AuthenticatedUser(
+                user.userId(),
+                studentId,
+                user.username(),
+                user.role(),
+                user.studentNo(),
+                user.name(),
+                user.major(),
+                user.grade()
+        );
     }
 
     public void markLoginFailure(String username, int maxFailedLoginAttempts) {
@@ -998,7 +1039,33 @@ public class MockPlatformService implements PlatformApplicationService {
         if (RoleType.CLASS_ADVISOR.name().equals(user.role())) {
             return List.of(DataScopeType.GRADE.name(), DataScopeType.CLASS.name());
         }
+        if (RoleType.CLASS_LEADER.name().equals(user.role())
+                || RoleType.LEAGUE_SECRETARY.name().equals(user.role())) {
+            return List.of(DataScopeType.GRADE.name(), DataScopeType.SELF.name());
+        }
         return List.of(DataScopeType.SELF.name());
+    }
+
+    private void transferStoredPassword(String oldUsername, String newUsername) {
+        if (oldUsername.equals(newUsername)) {
+            return;
+        }
+        String storedPassword = userPasswords.remove(oldUsername);
+        if (storedPassword != null) {
+            userPasswords.put(newUsername, storedPassword);
+        }
+    }
+
+    private Long resolveStudentId(PlatformUserDetailResponse user) {
+        if (!StringUtils.hasText(user.studentNo())) {
+            return null;
+        }
+        if (RoleType.STUDENT.name().equals(user.role())
+                || RoleType.LEAGUE_SECRETARY.name().equals(user.role())
+                || RoleType.CLASS_LEADER.name().equals(user.role())) {
+            return user.userId();
+        }
+        return null;
     }
 
     private List<String> enumNames(Enum<?>[] values) {

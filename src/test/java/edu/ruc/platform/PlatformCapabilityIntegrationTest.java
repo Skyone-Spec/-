@@ -115,7 +115,11 @@ class PlatformCapabilityIntegrationTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].role").isString())
-                .andExpect(jsonPath("$.data[0].dataScopes").isArray());
+                .andExpect(jsonPath("$.data[0].dataScopes").isArray())
+                .andExpect(jsonPath("$.data[4].role").value("CLASS_LEADER"))
+                .andExpect(jsonPath("$.data[4].dataScopes[0]").value("GRADE"))
+                .andExpect(jsonPath("$.data[6].role").value("STUDENT"))
+                .andExpect(jsonPath("$.data[7].role").value("ASSISTANT"));
 
         mockMvc.perform(get("/api/v1/platform/security-policy")
                         .header("Authorization", "Bearer " + token))
@@ -618,6 +622,51 @@ class PlatformCapabilityIntegrationTest {
                 .andExpect(jsonPath("$.data.content[0].extensionChannels").isArray())
                 .andExpect(jsonPath("$.data.page").value(0))
                 .andExpect(jsonPath("$.data.size").value(1));
+    }
+
+    @Test
+    @DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
+    void createdPlatformUserCanLoginInMockProfile() throws Exception {
+        String adminToken = loginAndExtractToken("admin", "123456");
+
+        mockMvc.perform(post("/api/v1/platform/users")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "assistant01",
+                                  "role": "ASSISTANT",
+                                  "enabled": true,
+                                  "rawPassword": "654321",
+                                  "passwordResetRequired": false
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.username").value("assistant01"))
+                .andExpect(jsonPath("$.data.role").value("ASSISTANT"));
+
+        String loginResponse = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "assistant01",
+                                  "password": "654321"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.username").value("assistant01"))
+                .andExpect(jsonPath("$.data.role").value("ASSISTANT"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String token = objectMapper.readTree(loginResponse).path("data").path("token").asText();
+
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.username").value("assistant01"))
+                .andExpect(jsonPath("$.data.role").value("ASSISTANT"));
     }
 
     @Test
