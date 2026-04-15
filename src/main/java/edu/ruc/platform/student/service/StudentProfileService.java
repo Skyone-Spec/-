@@ -170,7 +170,7 @@ public class StudentProfileService implements StudentProfileApplicationService {
                 .orElseThrow(() -> new BusinessException("学生不存在或无权访问"));
         if (!canAccessStudent(user, profile)
                 && !"LEAGUE_SECRETARY".equals(user.role())
-                && !("STUDENT".equals(user.role()) && studentId.equals(user.userId()))) {
+                && !("STUDENT".equals(user.role()) && studentId.equals(user.studentId()))) {
             throw new BusinessException("学生不存在或无权访问");
         }
         return studentPortraitRepository.findByStudentId(studentId)
@@ -464,7 +464,7 @@ public class StudentProfileService implements StudentProfileApplicationService {
                     null
             );
         }
-        if ("STUDENT".equals(role) && item.id().equals(user.userId())) {
+        if ("STUDENT".equals(role) && item.id().equals(user.studentId())) {
             return item;
         }
         return new StudentProfileResponse(
@@ -645,7 +645,7 @@ public class StudentProfileService implements StudentProfileApplicationService {
         if ("CLASS_ADVISOR".equals(user.role()) && canAccessStudent(user, profile)) {
             return portrait;
         }
-        if ("STUDENT".equals(user.role()) && profile.getId().equals(user.userId())) {
+        if ("STUDENT".equals(user.role()) && profile.getId().equals(user.studentId())) {
             return portrait;
         }
         if ("LEAGUE_SECRETARY".equals(user.role()) && Boolean.TRUE.equals(portrait.getPublicVisible())) {

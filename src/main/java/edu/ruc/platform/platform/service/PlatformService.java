@@ -231,8 +231,10 @@ public class PlatformService implements PlatformApplicationService {
                 new PlatformRoleResponse(RoleType.COLLEGE_ADMIN.name(), "学院管理员", List.of(DataScopeType.ALL.name())),
                 new PlatformRoleResponse(RoleType.COUNSELOR.name(), "辅导员", List.of(DataScopeType.ALL.name())),
                 new PlatformRoleResponse(RoleType.CLASS_ADVISOR.name(), "班主任", List.of(DataScopeType.GRADE.name(), DataScopeType.CLASS.name())),
+                new PlatformRoleResponse(RoleType.CLASS_LEADER.name(), "班长", List.of(DataScopeType.GRADE.name(), DataScopeType.SELF.name())),
                 new PlatformRoleResponse(RoleType.LEAGUE_SECRETARY.name(), "团支书", List.of(DataScopeType.GRADE.name(), DataScopeType.SELF.name())),
-                new PlatformRoleResponse(RoleType.STUDENT.name(), "普通学生", List.of(DataScopeType.SELF.name()))
+                new PlatformRoleResponse(RoleType.STUDENT.name(), "普通学生", List.of(DataScopeType.SELF.name())),
+                new PlatformRoleResponse(RoleType.ASSISTANT.name(), "学生助理", List.of(DataScopeType.SELF.name()))
         );
     }
 
@@ -845,6 +847,10 @@ public class PlatformService implements PlatformApplicationService {
         }
         if (RoleType.CLASS_ADVISOR.name().equals(user.role())) {
             return List.of(DataScopeType.GRADE.name(), DataScopeType.CLASS.name());
+        }
+        if (RoleType.CLASS_LEADER.name().equals(user.role())
+                || RoleType.LEAGUE_SECRETARY.name().equals(user.role())) {
+            return List.of(DataScopeType.GRADE.name(), DataScopeType.SELF.name());
         }
         return List.of(DataScopeType.SELF.name());
     }

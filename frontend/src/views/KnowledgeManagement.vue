@@ -184,13 +184,13 @@
           <button class="dialog-close" @click="closePreview">×</button>
         </div>
         <div class="dialog-body preview-content">
-          <h1>{{ previewArticle.title }}</h1>
+          <h1>{{ previewData.title }}</h1>
           <div class="preview-meta">
-            <span>{{ getCategoryName(previewArticle.categoryId) }}</span>
-            <span>作者：{{ previewArticle.author }}</span>
-            <span>{{ previewArticle.createTime }}</span>
+            <span>{{ getCategoryName(previewData.categoryId) }}</span>
+            <span>作者：{{ previewData.author }}</span>
+            <span>{{ previewData.createTime }}</span>
           </div>
-          <div class="preview-text">{{ previewArticle.content }}</div>
+          <div class="preview-text">{{ previewData.content }}</div>
         </div>
       </div>
     </div>
@@ -214,7 +214,7 @@ export default {
       showDialog: false,
       showPreview: false,
       editingArticle: null,
-      previewArticle: {},
+      previewData: {},
       formData: {
         title: '',
         categoryId: 1,
@@ -275,7 +275,7 @@ export default {
       this.showDialog = true
     },
     previewArticle(article) {
-      this.previewArticle = article
+      this.previewData = article
       this.showPreview = true
     },
     closePreview() {

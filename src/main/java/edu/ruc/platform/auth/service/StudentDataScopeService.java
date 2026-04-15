@@ -60,7 +60,7 @@ public class StudentDataScopeService {
             }
             return profile.getAdvisorScope().contains(user.username()) || profile.getAdvisorScope().contains(user.name());
         }
-        return "STUDENT".equals(user.role()) && profile.getId().equals(user.userId());
+        return "STUDENT".equals(user.role()) && profile.getId().equals(user.studentId());
     }
 
     public void requireGradeAccess(AuthenticatedUser user, String targetGrade) {
@@ -114,7 +114,7 @@ public class StudentDataScopeService {
             return new StudentDataScopeSnapshot(user.role(), true, false, null, List.of(), List.of());
         }
         if ("STUDENT".equals(user.role())) {
-            return new StudentDataScopeSnapshot(user.role(), false, true, user.grade(), List.of(), List.of(user.userId()));
+            return new StudentDataScopeSnapshot(user.role(), false, true, user.grade(), List.of(), List.of(user.studentId()));
         }
         if ("LEAGUE_SECRETARY".equals(user.role()) || "CLASS_LEADER".equals(user.role())) {
             return new StudentDataScopeSnapshot(user.role(), false, false, user.grade(), List.of(), List.of());
