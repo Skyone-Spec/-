@@ -1,0 +1,92 @@
+<!-- sub-pages/party/index.wxml -->
+<view class="container">
+  <!-- Tab切换 -->
+  <view class="tabs">
+    <view 
+      class="tab-item {{activeTab === 0 ? 'active' : ''}}"
+      bindtap="onTabChange"
+      data-index="0"
+    >
+      <text>入党流程</text>
+    </view>
+    <view 
+      class="tab-item {{activeTab === 1 ? 'active' : ''}}"
+      bindtap="onTabChange"
+      data-index="1"
+    >
+      <text>入团流程</text>
+    </view>
+  </view>
+  
+  <!-- 入党内容 -->
+  <block wx:if="{{activeTab === 0}}">
+    <view wx:if="{{loading}}" class="loading-state">
+      <text>加载中...</text>
+    </view>
+    <block wx:else>
+      <view class="progress-card" bindtap="goToProgress" data-type="party">
+        <view class="progress-header">
+          <text class="progress-title">我的入党进度</text>
+          <text class="progress-arrow">›</text>
+        </view>
+        <view class="timeline" wx:if="{{partyProgress}}">
+          <view wx:for="{{partyProgress.stages}}" wx:key="id" class="timeline-item">
+            <view class="timeline-dot {{item.status}}"></view>
+            <view class="timeline-content">
+              <text class="node-name">{{item.name}}</text>
+              <text class="node-status {{item.status}}">{{item.statusText}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="flow-card" wx:if="{{partyFlow.length > 0}}">
+        <view class="flow-title">入党流程</view>
+        <view class="flow-nodes">
+          <view wx:for="{{partyFlow}}" wx:key="id" class="flow-node">
+            <view class="node-index">{{index + 1}}</view>
+            <view class="node-info">
+              <text class="node-title">{{item.name}}</text>
+              <text class="node-desc">{{item.description}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </block>
+  </block>
+  
+  <!-- 入团内容 -->
+  <block wx:if="{{activeTab === 1}}">
+    <view wx:if="{{loading}}" class="loading-state">
+      <text>加载中...</text>
+    </view>
+    <block wx:else>
+      <view class="progress-card" bindtap="goToProgress" data-type="league">
+        <view class="progress-header">
+          <text class="progress-title">我的入团进度</text>
+          <text class="progress-arrow">›</text>
+        </view>
+        <view class="timeline" wx:if="{{leagueProgress}}">
+          <view wx:for="{{leagueProgress.stages}}" wx:key="id" class="timeline-item">
+            <view class="timeline-dot {{item.status}}"></view>
+            <view class="timeline-content">
+              <text class="node-name">{{item.name}}</text>
+              <text class="node-status {{item.status}}">{{item.statusText}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="flow-card" wx:if="{{leagueFlow.length > 0}}">
+        <view class="flow-title">入团流程</view>
+        <view class="flow-nodes">
+          <view wx:for="{{leagueFlow}}" wx:key="id" class="flow-node">
+            <view class="node-index">{{index + 1}}</view>
+            <view class="node-info">
+              <text class="node-title">{{item.name}}</text>
+              <text class="node-desc">{{item.description}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </block>
+  </block>
+</view>

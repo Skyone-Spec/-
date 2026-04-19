@@ -1,0 +1,54 @@
+<!-- sub-pages/login/index.wxml -->
+<view class="login-container">
+  <!-- 顶部插画 -->
+  <view class="header-section">
+    <image class="header-illustration" src="/static/images/login-illustration.png" mode="aspectFit" />
+    <text class="header-title">请绑定微人大账号</text>
+    <text class="header-subtitle">一站式办理 轻松办事</text>
+  </view>
+  
+  <!-- 登录表单 -->
+  <view class="form-section">
+    <view class="form-item">
+      <view class="form-label">真实姓名</view>
+      <input 
+        class="form-input" 
+        type="text" 
+        placeholder="请输入真实姓名"
+        value="{{name}}"
+        bindinput="onNameInput"
+        disabled="{{locked}}"
+      />
+    </view>
+    
+    <view class="form-item">
+      <view class="form-label">学号</view>
+      <input 
+        class="form-input" 
+        type="text" 
+        placeholder="请输入学号"
+        value="{{studentNo}}"
+        bindinput="onStudentNoInput"
+        disabled="{{locked}}"
+      />
+    </view>
+    
+    <button 
+      class="login-btn {{locked ? 'locked' : ''}}"
+      bindtap="handleLogin"
+      loading="{{loading}}"
+      disabled="{{locked}}"
+    >
+      <text wx:if="{{locked}}">{{lockTime}}秒后再试</text>
+      <text wx:else>登 录</text>
+    </button>
+    
+    <view class="login-tips">
+      <text>仅绑定微人大账号，不存储密码</text>
+    </view>
+    
+    <view class="error-tips" wx:if="{{errorCount > 0 && errorCount < 5}}">
+      <text>密码错误，剩余{{5 - errorCount}}次尝试机会</text>
+    </view>
+  </view>
+</view>

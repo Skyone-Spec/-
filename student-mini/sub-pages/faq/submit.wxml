@@ -1,0 +1,41 @@
+<!-- sub-pages/faq/submit.wxml -->
+<view class="container">
+  <view class="form-card">
+    <view class="form-item">
+      <view class="form-label">问题内容 <text class="required">*</text></view>
+      <textarea 
+        class="form-textarea" 
+        placeholder="请详细描述您的问题..."
+        value="{{content}}"
+        bindinput="onContentInput"
+      />
+    </view>
+    
+    <view class="form-item">
+      <view class="form-label">联系方式 <text class="optional">(选填)</text></view>
+      <input 
+        class="form-input" 
+        type="text" 
+        placeholder="手机号或邮箱"
+        value="{{contact}}"
+        bindinput="onContactInput"
+      />
+    </view>
+  </view>
+  
+  <view class="tips-card">
+    <view class="tips-title">温馨提示</view>
+    <view class="tips-item">• 提交后，工作人员将在1-3个工作日内回复</view>
+    <view class="tips-item">• 请留下联系方式以便我们及时联系您</view>
+    <view class="tips-item">• 常见问题可在FAQ中快速找到答案</view>
+  </view>
+  
+  <view class="bottom-bar">
+    <button 
+      class="submit-btn" 
+      bindtap="handleSubmit"
+      loading="{{submitting}}"
+      disabled="{{submitting}}"
+    >提交问题</button>
+  </view>
+</view>

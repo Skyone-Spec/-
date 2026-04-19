@@ -1,0 +1,21 @@
+<!-- sub-pages/feedback/history.wxml -->
+<view class="container">
+  <view class="list">
+    <view wx:for="{{history}}" wx:key="id" class="history-item">
+      <view class="item-header">
+        <text class="item-type">{{item.typeName}}</text>
+        <text class="item-status {{item.status}}">{{item.statusText}}</text>
+      </view>
+      <text class="item-content">{{item.content}}</text>
+      <text class="item-time">{{item.createTime}}</text>
+    </view>
+  </view>
+  
+  <view wx:if="{{!loading && history.length === 0}}" class="empty-state">
+    <text>暂无反馈记录</text>
+  </view>
+  
+  <view wx:if="{{loading}}" class="loading-more">
+    <text>加载中...</text>
+  </view>
+</view>

@@ -1,0 +1,35 @@
+<!-- sub-pages/faq/list.wxml -->
+<view class="container">
+  <view class="list">
+    <view 
+      wx:for="{{faqList}}"
+      wx:key="id"
+      class="faq-item {{item.expanded ? 'expanded' : ''}}"
+      bindtap="toggleItem"
+      data-index="{{index}}"
+    >
+      <view class="faq-question">
+        <text class="faq-icon">❓</text>
+        <text class="faq-title">{{item.question}}</text>
+        <text class="faq-arrow">{{item.expanded ? '∧' : '∨'}}</text>
+      </view>
+      <view class="faq-answer" wx:if="{{item.expanded}}">
+        <text class="faq-icon">💡</text>
+        <text class="faq-content">{{item.answer}}</text>
+      </view>
+    </view>
+  </view>
+  
+  <view wx:if="{{!loading && faqList.length === 0}}" class="empty-state">
+    <text>暂无常见问题</text>
+  </view>
+  
+  <!-- 底部按钮 -->
+  <view class="bottom-bar">
+    <button class="submit-btn" bindtap="goToSubmit">找不到答案？提交问题</button>
+  </view>
+  
+  <view wx:if="{{loading}}" class="loading-more">
+    <text>加载中...</text>
+  </view>
+</view>

@@ -1,0 +1,59 @@
+<!-- sub-pages/academic/upload.wxml -->
+<view class="container">
+  <view class="upload-card">
+    <view class="upload-header">
+      <text class="upload-title">上传成绩单</text>
+      <text class="upload-tip">请上传 PDF 格式的官方成绩单</text>
+    </view>
+    
+    <!-- 文件预览区 -->
+    <view class="preview-area" wx:if="{{previewUrl}}">
+      <view class="file-preview">
+        <text class="file-icon">📄</text>
+        <text class="file-name">{{fileName}}</text>
+        <view class="file-actions">
+          <text class="action-btn view" bindtap="chooseFile">重新选择</text>
+          <text class="action-btn delete" bindtap="removeFile">删除</text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 上传区域 -->
+    <view class="upload-area" wx:if="{{!previewUrl}}" bindtap="chooseFile">
+      <view class="upload-icon">
+        <text>📤</text>
+      </view>
+      <text class="upload-text">点击上传成绩单</text>
+      <text class="upload-hint">支持 PDF、PNG、JPG 格式，不超过 20MB</text>
+    </view>
+    
+    <!-- 上传进度 -->
+    <view class="progress-area" wx:if="{{uploading}}">
+      <view class="progress-bar">
+        <view class="progress-fill" style="width: {{uploadProgress}}%"></view>
+      </view>
+      <text class="progress-text">上传中... {{uploadProgress}}%</text>
+    </view>
+  </view>
+  
+  <!-- 说明 -->
+  <view class="tips-card">
+    <view class="tips-title">注意事项</view>
+    <view class="tips-item">• 请上传学校官方出具的成绩单</view>
+    <view class="tips-item">• 支持 PDF、图片等常见格式</view>
+    <view class="tips-item">• 上传后系统将自动解析并生成学业分析报告</view>
+    <view class="tips-item">• 如解析失败，请联系管理员处理</view>
+  </view>
+  
+  <!-- 提交按钮 -->
+  <view class="bottom-bar">
+    <button 
+      class="upload-btn" 
+      bindtap="handleUpload"
+      disabled="{{!file || uploading}}"
+      loading="{{uploading}}"
+    >
+      {{uploading ? '上传中...' : '上传并解析'}}
+    </button>
+  </view>
+</view>

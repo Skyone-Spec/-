@@ -1,0 +1,13 @@
+<!-- sub-pages/agreement/index.wxml -->
+<view class="container">
+  <view class="content">
+    <view class="section" wx:for="{{content}}" wx:key="index">
+      <text class="section-title" user-select="true">{{item.title}}</text>
+      <text class="section-content" user-select="true">{{item.content}}</text>
+    </view>
+    
+    <view class="footer">
+      <text user-select="true">更新日期：2026年4月10日</text>
+    </view>
+  </view>
+</view>

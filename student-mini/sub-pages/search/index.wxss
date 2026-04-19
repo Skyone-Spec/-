@@ -1,0 +1,164 @@
+/* sub-pages/search/index.wxss */
+.container {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+/* 搜索框 */
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  padding: 24rpx 32rpx;
+}
+
+.search-input {
+  flex: 1;
+  height: 72rpx;
+  background: #f5f5f5;
+  border-radius: 36rpx;
+  padding: 0 32rpx;
+  font-size: 28rpx;
+}
+
+.search-btn {
+  margin-left: 24rpx;
+  background: #1677ff;
+  color: #ffffff;
+  font-size: 28rpx;
+  padding: 0 32rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 36rpx;
+  border: none;
+}
+
+/* 结果Tab */
+.result-tabs {
+  display: flex;
+  background: #ffffff;
+  padding: 0 32rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 24rpx 0;
+  font-size: 28rpx;
+  color: #666;
+}
+
+.tab-item.active {
+  color: #1677ff;
+  font-weight: 600;
+  border-bottom: 4rpx solid #1677ff;
+}
+
+/* 结果列表 */
+.result-list {
+  padding: 24rpx;
+}
+
+.result-item {
+  background: #ffffff;
+  padding: 32rpx;
+  border-radius: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.result-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.result-title {
+  font-size: 30rpx;
+  color: #333;
+  font-weight: 500;
+  display: block;
+}
+
+.result-desc {
+  font-size: 26rpx;
+  color: #666;
+  margin-top: 12rpx;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-meta {
+  display: flex;
+  align-items: center;
+  margin-top: 16rpx;
+}
+
+.result-type {
+  font-size: 22rpx;
+  color: #1677ff;
+  background: #e6f0ff;
+  padding: 4rpx 16rpx;
+  border-radius: 4rpx;
+}
+
+.result-time {
+  font-size: 24rpx;
+  color: #999;
+  margin-left: 24rpx;
+}
+
+/* 历史/热门区域 */
+.history-section,
+.hot-section {
+  padding: 32rpx;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.clear-btn {
+  font-size: 26rpx;
+  color: #999;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24rpx;
+}
+
+.tag-item {
+  background: #ffffff;
+  padding: 16rpx 32rpx;
+  border-radius: 8rpx;
+  font-size: 26rpx;
+  color: #666;
+}
+
+.tag-item.hot {
+  background: #fff5f5;
+  color: #ff6b6b;
+}
+
+/* 空状态 */
+.empty-result,
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 200rpx 0;
+  color: #999;
+  font-size: 28rpx;
+}

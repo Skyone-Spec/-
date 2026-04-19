@@ -1,0 +1,129 @@
+/* sub-pages/about/index.wxss */
+
+.container {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60rpx 0 40rpx;
+  background-color: #fff;
+}
+
+.logo {
+  width: 160rpx;
+  height: 160rpx;
+  margin-bottom: 20rpx;
+}
+
+.app-name {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10rpx;
+}
+
+.version {
+  font-size: 26rpx;
+  color: #999;
+}
+
+.content {
+  padding: 30rpx;
+  background-color: #fff;
+}
+
+.desc {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.6;
+  text-align: justify;
+}
+
+.section {
+  margin-top: 20rpx;
+  background-color: #fff;
+}
+
+.section-title {
+  padding: 30rpx;
+  font-size: 28rpx;
+  color: #666;
+  border-bottom: 1rpx solid #eee;
+}
+
+.feature-list {
+  padding: 20rpx 30rpx;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.feature-item:last-child {
+  border-bottom: none;
+}
+
+.feature-icon {
+  font-size: 40rpx;
+  margin-right: 20rpx;
+}
+
+.feature-name {
+  font-size: 30rpx;
+  color: #333;
+  font-weight: 500;
+  width: 160rpx;
+}
+
+.feature-desc {
+  font-size: 26rpx;
+  color: #999;
+  flex: 1;
+}
+
+.link-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #eee;
+}
+
+.link-name {
+  font-size: 30rpx;
+  color: #333;
+}
+
+.arrow {
+  font-size: 32rpx;
+  color: #ccc;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #eee;
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 30rpx;
+  color: #333;
+}
+
+.info-value {
+  font-size: 28rpx;
+  color: #999;
+}

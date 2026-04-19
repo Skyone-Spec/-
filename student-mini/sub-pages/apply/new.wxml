@@ -1,0 +1,81 @@
+<!-- sub-pages/apply/new.wxml -->
+<view class="container">
+  <!-- 申请表单 -->
+  <view class="form-card">
+    <!-- 申请类型 -->
+    <view class="form-item">
+      <view class="form-label">申请类型 <text class="required">*</text></view>
+      <picker 
+        mode="selector" 
+        range="{{types}}" 
+        range-key="name"
+        bindchange="onTypeChange"
+      >
+        <view class="picker-value {{selectedType ? '' : 'placeholder'}}">
+          {{selectedType ? selectedType.name : '请选择申请类型'}}
+        </view>
+      </picker>
+    </view>
+    
+    <!-- 用途 -->
+    <view class="form-item">
+      <view class="form-label">用途 <text class="required">*</text></view>
+      <input 
+        class="form-input" 
+        type="text" 
+        placeholder="请填写申请用途"
+        value="{{purpose}}"
+        bindinput="onPurposeInput"
+      />
+    </view>
+    
+    <!-- 备注 -->
+    <view class="form-item">
+      <view class="form-label">备注</view>
+      <textarea 
+        class="form-textarea" 
+        placeholder="请填写备注信息（选填）"
+        value="{{remark}}"
+        bindinput="onRemarkInput"
+      />
+    </view>
+    
+    <!-- 附件 -->
+    <view class="form-item">
+      <view class="form-label">附件 <text class="optional">(≤20MB)</text></view>
+      <view class="attachment-list">
+        <view 
+          wx:for="{{attachments}}"
+          wx:key="index"
+          class="attachment-item"
+        >
+          <text class="attachment-name">{{item.name}}</text>
+          <text class="attachment-remove" bindtap="removeAttachment" data-index="{{index}}">×</text>
+        </view>
+        <view class="add-attachment" bindtap="chooseFile">
+          <text class="add-icon">+</text>
+          <text class="add-text">添加附件</text>
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 提示信息 -->
+  <view class="tips-card">
+    <view class="tips-title">温馨提示</view>
+    <view class="tips-item">• 请确保填写信息真实有效</view>
+    <view class="tips-item">• 附件支持 PDF、PNG、JPG、XLSX 格式</view>
+    <view class="tips-item">• 单个文件大小不超过 20MB</view>
+  </view>
+  
+  <!-- 底部按钮 -->
+  <view class="bottom-bar">
+    <button class="draft-btn" bindtap="saveDraft">保存草稿</button>
+    <button 
+      class="submit-btn" 
+      bindtap="handleSubmit"
+      loading="{{submitting}}"
+      disabled="{{submitting}}"
+    >提交申请</button>
+  </view>
+</view>

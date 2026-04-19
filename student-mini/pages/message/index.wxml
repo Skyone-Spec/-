@@ -1,0 +1,54 @@
+<!-- pages/message/index.wxml -->
+<view class="container">
+  <view class="tabs">
+    <view 
+      wx:for="{{tabs}}"
+      wx:key="index"
+      class="tab-item {{activeTab === index ? 'active' : ''}}"
+      bindtap="onTabChange"
+      data-index="{{index}}"
+    >
+      <text>{{item}}</text>
+    </view>
+  </view>
+  
+  <!-- 通知列表 -->
+  <view wx:if="{{activeTab === 0}}" class="message-list">
+    <view 
+      wx:for="{{notifications}}"
+      wx:key="id"
+      class="message-item"
+      bindtap="goToDetail"
+      data-id="{{item.id}}"
+      data-type="notification"
+    >
+      <view class="message-header">
+        <text class="message-icon {{item.important ? 'important' : ''}}">📢</text>
+        <text class="message-title">{{item.title}}</text>
+      </view>
+      <text class="message-summary">{{item.summary}}</text>
+      <text class="message-time">{{item.time}}</text>
+    </view>
+  </view>
+  
+  <!-- 公告列表 -->
+  <view wx:if="{{activeTab === 1}}" class="message-list">
+    <view wx:for="{{announcements}}" wx:key="id" class="message-item">
+      <view class="message-header">
+        <text class="message-icon">📌</text>
+        <text class="message-title">{{item.title}}</text>
+      </view>
+      <text class="message-content">{{item.content}}</text>
+      <text class="message-time">{{item.time}}</text>
+    </view>
+  </view>
+  
+  <!-- 私信 -->
+  <view wx:if="{{activeTab === 2}}" class="empty-state">
+    <text>暂无私信</text>
+  </view>
+  
+  <view wx:if="{{loading}}" class="loading-state">
+    <text>加载中...</text>
+  </view>
+</view>

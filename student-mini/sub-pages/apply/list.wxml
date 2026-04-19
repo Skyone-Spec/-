@@ -1,0 +1,52 @@
+<!-- sub-pages/apply/list.wxml -->
+<view class="container">
+  <!-- Tab -->
+  <view class="tabs">
+    <view 
+      wx:for="{{tabs}}"
+      wx:key="index"
+      class="tab-item {{activeTab === index ? 'active' : ''}}"
+      bindtap="onTabChange"
+      data-index="{{index}}"
+    >
+      <text>{{item}}</text>
+    </view>
+  </view>
+  
+  <!-- 列表 -->
+  <view class="list">
+    <view 
+      wx:for="{{list}}"
+      wx:key="id"
+      class="apply-item"
+      bindtap="goToDetail"
+      data-id="{{item.id}}"
+    >
+      <view class="apply-header">
+        <text class="apply-type">{{item.typeName}}</text>
+        <text class="apply-status status-{{item.status}}">{{item.statusText}}</text>
+      </view>
+      <view class="apply-body">
+        <text class="apply-purpose">{{item.purpose || '未填写用途'}}</text>
+        <text class="apply-time">{{item.createTime}}</text>
+      </view>
+      <view class="apply-footer" wx:if="{{item.attachments && item.attachments.length > 0}}">
+        <text class="attach-count">📎 {{item.attachments.length}}个附件</text>
+      </view>
+    </view>
+    
+    <view wx:if="{{list.length === 0 && !loading}}" class="empty-state">
+      <text>暂无{{activeTab === 0 ? '申请记录' : '草稿'}}</text>
+    </view>
+  </view>
+  
+  <!-- 新建按钮 -->
+  <view class="bottom-bar">
+    <button class="new-btn" bindtap="goToNew">新建申请</button>
+  </view>
+  
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-more">
+    <text>加载中...</text>
+  </view>
+</view>

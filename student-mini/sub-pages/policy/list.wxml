@@ -1,0 +1,87 @@
+<!-- sub-pages/policy/list.wxml -->
+<view class="container">
+  <!-- Tab -->
+  <view class="tabs">
+    <view 
+      wx:for="{{tabs}}"
+      wx:key="index"
+      class="tab-item {{activeTab === index ? 'active' : ''}}"
+      bindtap="onTabChange"
+      data-index="{{index}}"
+    >
+      <text>{{item}}</text>
+    </view>
+  </view>
+  
+  <!-- 政策列表 -->
+  <view wx:if="{{activeTab === 0}}" class="list">
+    <view 
+      wx:for="{{policyList}}"
+      wx:key="id"
+      class="item"
+      bindtap="goToDetail"
+      data-id="{{item.id}}"
+    >
+      <view class="item-content">
+        <text class="item-title">{{item.title}}</text>
+        <view class="item-meta">
+          <text class="item-date">{{item.publishDate}}</text>
+          <text class="item-tag" wx:if="{{item.category}}">{{item.category}}</text>
+        </view>
+      </view>
+      <text class="item-arrow">›</text>
+    </view>
+  </view>
+  
+  <!-- 通知列表 -->
+  <view wx:if="{{activeTab === 1}}" class="list">
+    <view 
+      wx:for="{{noticeList}}"
+      wx:key="id"
+      class="item"
+      bindtap="goToDetail"
+      data-id="{{item.id}}"
+    >
+      <view class="item-content">
+        <text class="item-title">{{item.title}}</text>
+        <view class="item-meta">
+          <text class="item-date">{{item.publishTime}}</text>
+          <text class="item-tag important" wx:if="{{item.important}}">重要</text>
+        </view>
+      </view>
+      <text class="item-arrow">›</text>
+    </view>
+  </view>
+  
+  <!-- 模板列表 -->
+  <view wx:if="{{activeTab === 2}}" class="list">
+    <view 
+      wx:for="{{templateList}}"
+      wx:key="id"
+      class="item template-item"
+      bindtap="goToDetail"
+      data-id="{{item.id}}"
+      data-type="template"
+    >
+      <view class="template-icon">📄</view>
+      <view class="item-content">
+        <text class="item-title">{{item.name}}</text>
+        <view class="item-meta">
+          <text class="item-format">{{item.format}}</text>
+          <text class="item-size" wx:if="{{item.size}}">{{item.size}}</text>
+        </view>
+      </view>
+      <view class="download-btn">下载</view>
+    </view>
+  </view>
+  
+  <!-- 空状态 -->
+  <view wx:if="{{!loading && ((activeTab === 0 && policyList.length === 0) || (activeTab === 1 && noticeList.length === 0) || (activeTab === 2 && templateList.length === 0))}}" class="empty-state">
+    <text>暂无内容</text>
+  </view>
+  
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-more">
+    <text>加载中...</text>
+  </view>
+</view>
