@@ -2,21 +2,32 @@
 const { get, post } = require('./request')
 
 // 微信登录
-export const wechatLogin = (code) => {
+// TODO: 替换为实际后端路径 /api/v1/auth/wechat-login
+const wechatLogin = (code) => {
   return post('/auth/wechat-login', { code })
 }
 
 // 绑定学号
-export const bindAccount = (data) => {
+// TODO: 替换为实际后端路径 /api/v1/auth/bind 或 /api/v1/auth/login
+const bindAccount = (data) => {
   return post('/auth/bind', data)
 }
 
 // 获取当前用户
-export const getCurrentUser = () => {
+// TODO: 替换为实际后端路径 /api/v1/auth/me
+const getCurrentUser = () => {
   return get('/auth/current')
 }
 
 // 退出登录
-export const logout = () => {
+// TODO: 替换为实际后端路径 /api/v1/auth/logout
+const logout = () => {
   return post('/auth/logout')
+}
+
+module.exports = {
+  wechatLogin,
+  bindAccount,
+  getCurrentUser,
+  logout
 }

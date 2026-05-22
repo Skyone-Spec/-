@@ -1,32 +1,47 @@
 // API 请求封装
-const app = getApp()
+// 注意：不在模块顶部调用 getApp()，避免真机上的问题
 
-// 是否启用 Mock 数据（本地测试用）
-const USE_MOCK = true
+// 从 globalData 动态读取 Mock 配置，默认为 true
+let USE_MOCK = true
+try {
+  USE_MOCK = getApp().globalData.USE_MOCK !== false
+} catch (e) {
+  USE_MOCK = true
+}
 
 // 延迟加载 mock 模块
 let mockModule = null
 try {
   mockModule = require('./mock.js')
+  console.log('[Request] Mock模块加载成功')
 } catch (e) {
   console.error('[Request] 加载mock模块失败:', e)
 }
 
 const request = (options) => {
-  return new Promise(async (resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const { url, method = 'GET', data, header = {} } = options
     
-    // Mock 模式
-    if (USE_MOCK && mockModule) {
+    // Mock 模式（同步处理）
+    if (USE_MOCK) {
       try {
-        const mockResult = mockModule.getMockData(url, data)
-        // 模拟异步延迟
-        setTimeout(() => {
+        if (!mockModule) {
+          // 尝试重新加载 mock 模块
+          try {
+            mockModule = require('./mock.js')
+          } catch (loadErr) {
+            console.error('[Request] 重新加载mock失败:', loadErr)
+          }
+        }
+        
+        if (mockModule && mockModule.getMockData) {
+          const mockResult = mockModule.getMockData(url, data)
+          console.log('[Request] Mock返回:', url, mockResult)
           resolve(mockResult)
-        }, 50)
-        return
+          return
+        }
       } catch (e) {
-        console.error('[Request] Mock请求失败:', e)
+        console.error('[Request] Mock处理异常:', e)
       }
     }
     
@@ -35,10 +50,25 @@ const request = (options) => {
       wx.showLoading({ title: '加载中...', mask: true })
     }
     
+    // GET请求添加时间戳防止缓存
+    let requestData = data
+    if (method === 'GET' && requestData) {
+      requestData = { ...requestData, _t: Date.now() }
+    }
+    
+    let app
+    try {
+      app = getApp()
+    } catch (e) {
+      console.error('[Request] 获取App实例失败:', e)
+      reject({ success: false, message: '应用未初始化' })
+      return
+    }
+    
     wx.request({
       url: app.globalData.baseUrl + url,
       method,
-      data,
+      data: requestData,
       timeout: 30000,
       header: {
         'Content-Type': 'application/json',

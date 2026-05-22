@@ -2,9 +2,6 @@
 const app = getApp()
 const api = require('../../api/auth')
 
-// Mock 模式标识
-const USE_MOCK = true
-
 Page({
   data: {
     name: '',
@@ -61,7 +58,7 @@ Page({
       let wxCode = 'mock_wx_code'
       
       // 仅在非 Mock 模式下获取微信 code
-      const app = getApp()
+      // 使用统一的 getApp().globalData.USE_MOCK
       if (app.globalData.USE_MOCK !== false) {
         // Mock 模式跳过 wx.login
         console.log('Mock 模式：跳过微信登录')

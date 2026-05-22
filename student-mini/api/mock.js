@@ -3,6 +3,7 @@
  * 将此文件配置到 request.js 中可拦截 API 请求返回模拟数据
  */
 
+// 统一使用 CommonJS 语法，避免 ES6/CommonJS 混用导致问题
 const mockData = {
   // 首页数据
   '/banners': {

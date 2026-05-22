@@ -7,12 +7,23 @@ Page({
     userInfo: null,
     banners: [],
     news: [],
-    announcements: []
+    announcements: [],
+    date: '',
+    unreadCount: 0
   },
   
   onLoad() {
     this.setData({ userInfo: app.globalData.userInfo })
+    this.initDate()
     this.loadHomeData()
+  },
+  
+  // 初始化日期显示
+  initDate() {
+    const now = new Date()
+    const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+    const dateStr = `${now.getMonth() + 1}月${now.getDate()}日 ${weekDays[now.getDay()]}`
+    this.setData({ date: dateStr })
   },
   
   onShow() {
