@@ -52,13 +52,29 @@ Page({
     const { activeTab, page, pageSize } = this.data
     let url = ''
     
-    if (activeTab === 0) url = '/kb/policies'
-    else if (activeTab === 1) url = '/notices'
-    else url = '/kb/templates'
+    // 根据 Tab 选择对应的后端接口
+    if (activeTab === 0) {
+      // 政策文件 - 知识搜索
+      url = '/knowledge/search'
+    } else if (activeTab === 1) {
+      // 通知通告 - 学生通知列表
+      url = '/student/notices'
+    } else {
+      // 模板下载 - 知识模板
+      url = '/knowledge/templates'
+    }
     
     try {
       const res = await get(url, { page, pageSize })
-      const list = res.data.list || []
+      // 处理不同接口的返回格式
+      let list = []
+      if (res.data?.content) {
+        list = res.data.content
+      } else if (res.data?.list) {
+        list = res.data.list
+      } else if (Array.isArray(res.data)) {
+        list = res.data
+      }
       
       if (activeTab === 0) {
         this.setData({

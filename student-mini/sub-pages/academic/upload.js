@@ -11,26 +11,36 @@ Page({
     uploadProgress: 0
   },
   
-  // 选择文件
+  // 选择文件（使用 chooseMessageFile 支持 PDF/Word/Excel 等多格式）
   chooseFile() {
+    wx.showToast({
+      title: '请先将文件发送到微信聊天（如文件传输助手），然后在此选择',
+      icon: 'none',
+      duration: 3000
+    })
+
     wx.chooseMessageFile({
       count: 1,
       type: 'file',
-      extension: ['pdf', 'png', 'jpg', 'jpeg'],
+      extension: ['pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx', 'xls', 'xlsx'],
       success: (res) => {
         const file = res.tempFiles[0]
-        
+
         // 检查文件大小（20MB限制）
         if (file.size > 20 * 1024 * 1024) {
           wx.showToast({ title: '文件不能超过20MB', icon: 'none' })
           return
         }
-        
+
         this.setData({
           file,
           fileName: file.name,
           previewUrl: file.path || ''
         })
+      },
+      fail: (err) => {
+        console.error('选择文件失败', err)
+        wx.showToast({ title: '选择文件失败', icon: 'none' })
       }
     })
   },

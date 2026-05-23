@@ -13,6 +13,11 @@ Page({
   },
   
   onLoad() {
+    // 检查登录状态，未登录则跳转登录页
+    if (!app.isLoggedIn()) {
+      wx.navigateTo({ url: '/sub-pages/login/index' })
+      return
+    }
     this.setData({ userInfo: app.globalData.userInfo })
     this.initDate()
     this.loadHomeData()
@@ -33,14 +38,25 @@ Page({
   async loadHomeData() {
     try {
       console.log('开始加载首页数据')
-      const bannersRes = await get('/banners')
-      console.log('bannersRes:', bannersRes)
-      const newsRes = await get('/news')
-      console.log('newsRes:', newsRes)
+      // 使用后端真实存在的 /student/dashboard 聚合接口
+      const dashboardRes = await get('/student/dashboard')
+      console.log('dashboardRes:', dashboardRes)
+      
+      const dashboard = dashboardRes.data || {}
       
       this.setData({
-        banners: bannersRes.data || [],
-        news: newsRes.data || []
+        // banners 从 dashboard 的 notices 中构造
+        banners: dashboard.notices ? dashboard.notices.slice(0, 3).map(n => ({
+          id: n.id,
+          image: '/static/images/banner1.png',
+          title: n.title
+        })) : [],
+        // news 从 dashboard.notices 中取
+        news: (dashboard.notices || []).map(n => ({
+          id: n.id,
+          title: n.title,
+          time: n.publishTime || n.time || ''
+        }))
       })
       console.log('数据加载完成')
     } catch (e) {

@@ -41,19 +41,18 @@ Page({
     this.setData({ loading: true })
     
     try {
-      const [partyProgressRes, partyFlowRes, leagueProgressRes, leagueFlowRes] = await Promise.all([
-        get('/party/my-progress'),
-        get('/party/flows'),
-        get('/party/league-progress'),
-        get('/party/league-flows')
+      // 使用后端真实接口：/student/party-progress 和 /student/party-progress/reminders
+      const [partyProgressRes] = await Promise.all([
+        get('/student/party-progress'),
+        get('/student/party-progress/reminders')
       ])
       
       console.log('数据加载成功')
       this.setData({
         partyProgress: partyProgressRes.data || {},
-        partyFlow: partyFlowRes.data || [],
-        leagueProgress: leagueProgressRes.data || {},
-        leagueFlow: leagueFlowRes.data || [],
+        partyFlow: partyProgressRes.data?.stages || [],
+        leagueProgress: partyProgressRes.data || {},
+        leagueFlow: partyProgressRes.data?.stages || [],
         loading: false,
         dataLoaded: true
       })

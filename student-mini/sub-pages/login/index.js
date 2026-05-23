@@ -6,6 +6,7 @@ Page({
   data: {
     name: '',
     studentNo: '',
+    password: '',
     loading: false,
     errorCount: 0,
     locked: false,
@@ -30,9 +31,13 @@ Page({
     this.setData({ studentNo: e.detail.value })
   },
   
+  onPasswordInput(e) {
+    this.setData({ password: e.detail.value })
+  },
+  
   // 登录提交
   async handleLogin() {
-    const { name, studentNo, loading, locked } = this.data
+    const { name, studentNo, password, loading, locked } = this.data
     
     if (locked) {
       wx.showToast({ title: `请${this.data.lockTime}秒后再试`, icon: 'none' })
@@ -55,33 +60,20 @@ Page({
     this.setData({ loading: true })
     
     try {
-      let wxCode = 'mock_wx_code'
-      
-      // 仅在非 Mock 模式下获取微信 code
-      // 使用统一的 getApp().globalData.USE_MOCK
-      if (app.globalData.USE_MOCK !== false) {
-        // Mock 模式跳过 wx.login
-        console.log('Mock 模式：跳过微信登录')
-      } else {
-        // 微信登录获取code
-        const loginRes = await new Promise((resolve, reject) => {
-          wx.login({
-            success: res => resolve(res),
-            fail: err => reject(err)
-          })
-        })
-        wxCode = loginRes.code
-      }
-      
-      // 调用绑定接口
-      const res = await api.bindAccount({
-        name: name.trim(),
-        studentNo: studentNo.trim(),
-        wxCode: wxCode
+      // 使用后端 /auth/login 接口
+      const res = await api.login({
+        username: studentNo.trim(),
+        password: password || '123456' // 默认密码 123456
       })
       
       // 保存登录数据
-      app.setLoginData(res.data.token, res.data.userInfo)
+      app.setLoginData(res.data.token, {
+        id: res.data.userId,
+        studentId: res.data.userId,
+        name: name.trim(),
+        studentNo: studentNo.trim(),
+        role: res.data.role
+      })
       
       wx.showToast({ title: '登录成功', icon: 'success' })
       
@@ -93,6 +85,7 @@ Page({
       
     } catch (e) {
       console.error('登录失败', e)
+      wx.showToast({ title: e.message || '登录失败，请检查账号密码', icon: 'none' })
       
       // 累计失败次数
       const newCount = this.data.errorCount + 1

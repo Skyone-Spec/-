@@ -12,9 +12,8 @@ Page({
   },
   
   onLoad() {
-    // Mock 模式下跳过登录检查
-    if (!app.isLoggedIn() && !app.globalData.USE_MOCK) {
-      wx.redirectTo({ url: '/sub-pages/login/index' })
+    if (!app.isLoggedIn()) {
+      wx.navigateTo({ url: '/sub-pages/login/index' })
       return
     }
     this.loadMessages()
@@ -24,10 +23,10 @@ Page({
     this.setData({ loading: true })
     
     try {
-      const res = await get('/messages')
+      const res = await get('/student/notices')
       this.setData({
-        notifications: res.data.notifications || [],
-        announcements: res.data.announcements || []
+        notifications: res.data || [],
+        announcements: []
       })
     } catch (e) {
       console.error('加载消息失败', e)
@@ -45,7 +44,9 @@ Page({
   goToDetail(e) {
     const { id, type } = e.currentTarget.dataset
     if (type === 'notification') {
-      wx.navigateTo({ url: `/pages/message/detail?id=${id}` })
+      // 注意：后端暂未提供 /student/notices/{id} 接口
+      // 暂时跳转到知识库详情页面
+      wx.navigateTo({ url: `/sub-pages/faq/index?noticeId=${id}` })
     }
   }
 })

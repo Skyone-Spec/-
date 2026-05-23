@@ -25,7 +25,8 @@ Page({
     this.setData({ loading: true })
     
     try {
-      const res = await get(`/messages/${this.data.id}`)
+      // 使用后端 /student/notices/{id} 接口
+      const res = await get(`/student/notices/${this.data.id}`)
       this.setData({ detail: res.data })
     } catch (e) {
       console.error('加载详情失败', e)

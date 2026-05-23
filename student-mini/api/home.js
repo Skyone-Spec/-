@@ -1,34 +1,29 @@
 // 首页接口
 const { get } = require('./request')
 
-// 获取首页数据
-// TODO: 替换为实际后端路径 /api/v1/student/dashboard
+// 获取首页聚合数据
 const getHomeData = () => {
-  return get('/mini/home')
+  return get('/student/dashboard')
 }
 
-// 获取Banner
-// TODO: 替换为实际后端路径（首页聚合接口中已包含）
+// 获取Banner（后端暂无独立接口，从 dashboard 聚合数据中提取）
 const getBanners = () => {
-  return get('/mini/banners')
+  return get('/student/dashboard')
 }
 
-// 获取服务列表
-// TODO: 替换为实际后端路径（首页聚合接口中已包含）
+// 获取服务列表（后端暂无独立接口，从 dashboard 聚合数据中提取）
 const getServices = () => {
-  return get('/mini/services')
+  return get('/student/dashboard')
 }
 
-// 获取待办事项
-// TODO: 替换为实际后端路径 /api/v1/student/growth-suggestions
+// 获取待办事项（成长建议）
 const getTodos = () => {
-  return get('/mini/todos')
+  return get('/student/growth-suggestions')
 }
 
 // 获取通知列表
-// TODO: 替换为实际后端路径 /api/v1/student/notices 或 /api/v1/notices/student/{studentId}
 const getNotices = (params) => {
-  return get('/mini/notices', params)
+  return get('/student/notices', params)
 }
 
 module.exports = {

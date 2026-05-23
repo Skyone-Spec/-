@@ -7,6 +7,10 @@ Page({
   },
   
   onLoad() {
+    if (!app.isLoggedIn()) {
+      wx.navigateTo({ url: '/sub-pages/login/index' })
+      return
+    }
     this.setData({ userInfo: app.globalData.userInfo })
   },
   

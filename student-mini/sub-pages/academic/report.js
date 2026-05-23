@@ -20,7 +20,9 @@ Page({
     this.setData({ loading: true })
     
     try {
-      const res = await get('/academic/report')
+      // 获取学生ID，使用后端 /academic/analysis/{studentId} 接口
+      const studentId = app.globalData.userInfo?.studentId || app.globalData.userInfo?.id || 1
+      const res = await get(`/academic/analysis/${studentId}`)
       this.setData({ report: res.data })
     } catch (e) {
       console.error('加载报告失败', e)
