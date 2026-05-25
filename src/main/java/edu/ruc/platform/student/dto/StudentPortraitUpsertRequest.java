@@ -16,6 +16,7 @@ public record StudentPortraitUpsertRequest(
         @Size(max = 500, message = "志愿服务信息长度不能超过 500") String volunteerService,
         @Size(max = 500, message = "科研经历长度不能超过 500") String researchExperience,
         @Size(max = 500, message = "违纪记录长度不能超过 500") String disciplineRecords,
+        @Size(max = 500, message = "干部任职信息长度不能超过 500") String leadershipRoles,
         @Size(max = 500, message = "日常表现长度不能超过 500") String dailyPerformance,
         @DecimalMin(value = "0.0", message = "学生画像 GPA 必须在 0 到 4.5 之间")
         @DecimalMax(value = "4.5", message = "学生画像 GPA 必须在 0 到 4.5 之间")

@@ -224,6 +224,16 @@ public class MockAdminService implements AdminApplicationService {
     }
 
     @Override
+    public void deleteKnowledgeItem(Long id) {
+        initializeKnowledgeItems();
+        boolean removed = knowledgeItems.removeIf(item -> item.id().equals(id));
+        if (!removed) {
+            throw new BusinessException("知识条目不存在: " + id);
+        }
+        writeOperationLog("KNOWLEDGE", "DELETE", "知识条目#" + id, "SUCCESS", null);
+    }
+
+    @Override
     public List<KnowledgeAttachmentResponse> listKnowledgeAttachments(Long knowledgeId) {
         initializeKnowledgeItems();
         boolean exists = knowledgeItems.stream().anyMatch(item -> item.id().equals(knowledgeId));

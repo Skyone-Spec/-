@@ -46,7 +46,7 @@ public class MockStudentProfileService implements StudentProfileApplicationServi
             new StudentProfileResponse(10002L, "2023100002", "李四", "计算机类", "2023级", "计科二班", "advisor02|赵老师", "本科", "lisi@example.edu", false, "ACTIVE", null, "****************34", "********1234", "河北*", "河北*", "导师*")
     ));
     private final List<StudentPortraitResponse> portraits = new ArrayList<>(List.of(
-            new StudentPortraitResponse(10001L, "男", "汉族", "国奖,校优", "国家奖学金", "数学建模", "支教实践", "20小时", "导师课题参与", null, "表现良好", 3.82, 12, 5, 98, "升学", "可作为榜样展示", "胡浩老师", "老师维护", true)
+            new StudentPortraitResponse(10001L, "男", "汉族", "国奖,校优", "国家奖学金", "数学建模", "支教实践", "20小时", "导师课题参与", null, "班长、团支书", "表现良好", 3.82, 12, 5, 98, "升学", "可作为榜样展示", "胡浩老师", "老师维护", true)
     ));
     private final List<StudentStatusHistoryResponse> statusHistories = new ArrayList<>(List.of(
             new StudentStatusHistoryResponse(21L, 10001L, null, "ACTIVE", null, "初始建档", "系统管理员", "SUPER_ADMIN", LocalDateTime.of(2026, 3, 20, 9, 0))
@@ -220,7 +220,7 @@ public class MockStudentProfileService implements StudentProfileApplicationServi
                 .filter(item -> item.studentId().equals(studentId))
                 .map(item -> enforcePortraitAccess(user, profile, item))
                 .findFirst()
-                .orElse(new StudentPortraitResponse(studentId, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, false));
+                .orElse(new StudentPortraitResponse(studentId, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, false));
     }
 
     @Override
@@ -237,6 +237,7 @@ public class MockStudentProfileService implements StudentProfileApplicationServi
                 request.volunteerService(),
                 request.researchExperience(),
                 request.disciplineRecords(),
+                request.leadershipRoles(),
                 request.dailyPerformance(),
                 request.gpa(),
                 request.gradeRank(),

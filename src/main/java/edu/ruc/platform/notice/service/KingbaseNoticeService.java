@@ -243,6 +243,39 @@ public class KingbaseNoticeService implements NoticeApplicationService {
         return List.of("IN_APP");
     }
 
+    @Override
+    public void markAsRead(Long noticeId, Long studentId) {
+        List<LatestNoticeDeliveryTarget> targets = latestNoticeDeliveryTargetRepository.findByTargetUserId(studentId);
+        for (LatestNoticeDeliveryTarget target : targets) {
+            LatestNoticeDelivery delivery = latestNoticeDeliveryRepository.findById(target.getDeliveryId()).orElse(null);
+            if (delivery != null && delivery.getNoticeId().equals(noticeId)) {
+                target.setIsRead(true);
+                target.setReadAt(LocalDateTime.now());
+                latestNoticeDeliveryTargetRepository.save(target);
+                return;
+            }
+        }
+    }
+
+    @Override
+    public void markAllAsRead(Long studentId) {
+        List<LatestNoticeDeliveryTarget> targets = latestNoticeDeliveryTargetRepository.findByTargetUserId(studentId);
+        for (LatestNoticeDeliveryTarget target : targets) {
+            if (!Boolean.TRUE.equals(target.getIsRead())) {
+                target.setIsRead(true);
+                target.setReadAt(LocalDateTime.now());
+                latestNoticeDeliveryTargetRepository.save(target);
+            }
+        }
+    }
+
+    @Override
+    public long countUnread(Long studentId) {
+        return latestNoticeDeliveryTargetRepository.findByTargetUserId(studentId).stream()
+                .filter(target -> !Boolean.TRUE.equals(target.getIsRead()))
+                .count();
+    }
+
     private record StudentNoticeSnapshot(String grade, Integer gradeYear, String major, boolean graduated) {
     }
 }

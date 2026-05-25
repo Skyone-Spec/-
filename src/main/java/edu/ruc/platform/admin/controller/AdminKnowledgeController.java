@@ -81,6 +81,13 @@ public class AdminKnowledgeController {
         return ApiResponse.success("知识条目已更新", adminService.updateKnowledgeItem(id, request));
     }
 
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@Positive(message = "知识条目ID必须大于 0") @PathVariable Long id) {
+        currentUserService.requireAnyRole(RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR);
+        adminService.deleteKnowledgeItem(id);
+        return ApiResponse.success("知识条目已删除", null);
+    }
+
     @GetMapping("/{id}/attachments")
     public ApiResponse<List<KnowledgeAttachmentResponse>> listAttachments(@Positive(message = "知识条目ID必须大于 0") @PathVariable Long id) {
         currentUserService.requireAnyRole(RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR, RoleType.CLASS_ADVISOR);

@@ -282,6 +282,23 @@ public class AdminService implements AdminApplicationService {
     }
 
     @Override
+    public void deleteKnowledgeItem(Long id) {
+        if (isKingbaseProfile()) {
+            LatestKnowledgePolicy item = latestKnowledgePolicyRepository.findById(id)
+                    .orElseThrow(() -> new BusinessException("知识条目不存在"));
+            item.setIsDeleted(1);
+            latestKnowledgePolicyRepository.save(item);
+            writeOperationLog("KNOWLEDGE", "DELETE", item.getTitle(), "SUCCESS", null);
+            return;
+        }
+        KnowledgeDocument item = knowledgeDocumentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("知识条目不存在"));
+        item.setDeleted(true);
+        knowledgeDocumentRepository.save(item);
+        writeOperationLog("KNOWLEDGE", "DELETE", item.getTitle(), "SUCCESS", null);
+    }
+
+    @Override
     public List<KnowledgeAttachmentResponse> listKnowledgeAttachments(Long knowledgeId) {
         if (isKingbaseProfile()) {
             LatestKnowledgePolicy item = latestKnowledgePolicyRepository.findById(knowledgeId)
@@ -831,6 +848,7 @@ public class AdminService implements AdminApplicationService {
         AuthenticatedUser currentUser = currentUserService.requireCurrentUser();
         item.setTitle(request.title());
         item.setCategory(request.category());
+        item.setTags(request.tags());
         item.setContent(request.content());
         item.setOfficialUrl(request.officialUrl());
         item.setSourceFileName(request.sourceFileName());

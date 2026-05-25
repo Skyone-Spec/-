@@ -36,7 +36,10 @@ import edu.ruc.platform.platform.dto.PlatformUserResponse;
 import edu.ruc.platform.platform.dto.PlatformUserStatsResponse;
 import edu.ruc.platform.platform.dto.PlatformUserUpsertRequest;
 import edu.ruc.platform.platform.service.PlatformApplicationService;
+import edu.ruc.platform.platform.service.ExcelImportExportService;
+import edu.ruc.platform.platform.dto.BatchImportResultResponse;
 import edu.ruc.platform.certificate.dto.ApprovalHistoryResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
@@ -53,6 +56,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -62,6 +66,7 @@ import java.util.List;
 public class PlatformController {
 
     private final PlatformApplicationService platformService;
+    private final ExcelImportExportService excelImportExportService;
 
     @GetMapping("/contracts")
     @RequireRoles({
@@ -446,10 +451,47 @@ public class PlatformController {
             RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR, RoleType.CLASS_ADVISOR
     })
     public ApiResponse<PageResponse<PlatformNotificationSendRecordResponse>> pageNotificationSendRecords(@RequestParam(required = false) String channel,
-                                                                                                          @RequestParam(required = false) String status,
-                                                                                                          @RequestParam(required = false) String targetKeyword,
-                                                                                                          @Min(value = 0, message = "page 不能小于 0") @RequestParam(defaultValue = "0") int page,
-                                                                                                          @Min(value = 1, message = "size 不能小于 1") @RequestParam(defaultValue = "10") int size) {
+                                                                                                           @RequestParam(required = false) String status,
+                                                                                                           @RequestParam(required = false) String targetKeyword,
+                                                                                                           @Min(value = 0, message = "page 不能小于 0") @RequestParam(defaultValue = "0") int page,
+                                                                                                           @Min(value = 1, message = "size 不能小于 1") @RequestParam(defaultValue = "10") int size) {
         return ApiResponse.success(platformService.pageNotificationSendRecords(channel, status, targetKeyword, page, size));
+    }
+
+    @PostMapping("/users/import")
+    @RequireRoles({RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN})
+    public ApiResponse<BatchImportResultResponse> importUsers(@RequestParam("file") MultipartFile file) {
+        return ApiResponse.success("用户导入完成", excelImportExportService.importUsers(file));
+    }
+
+    @GetMapping("/users/export")
+    @RequireRoles({RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR})
+    public void exportUsers(@RequestParam(required = false) String role,
+                           @RequestParam(required = false) Boolean enabled,
+                           HttpServletResponse response) throws IOException {
+        byte[] data = excelImportExportService.exportUsers(role, enabled);
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment; filename=users.xlsx");
+        response.getOutputStream().write(data);
+        response.getOutputStream().flush();
+    }
+
+    @PostMapping("/students/import")
+    @RequireRoles({RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR})
+    public ApiResponse<BatchImportResultResponse> importStudents(@RequestParam("file") MultipartFile file) {
+        return ApiResponse.success("学生导入完成", excelImportExportService.importStudents(file));
+    }
+
+    @GetMapping("/students/export")
+    @RequireRoles({RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR})
+    public void exportStudents(@RequestParam(required = false) String grade,
+                              @RequestParam(required = false) String className,
+                              @RequestParam(required = false) String status,
+                              HttpServletResponse response) throws IOException {
+        byte[] data = excelImportExportService.exportStudents(grade, className, status);
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment; filename=students.xlsx");
+        response.getOutputStream().write(data);
+        response.getOutputStream().flush();
     }
 }
