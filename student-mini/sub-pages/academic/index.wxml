@@ -1,0 +1,96 @@
+<!-- sub-pages/academic/index.wxml -->
+<view class="container">
+  <view wx:if="{{!loading && report}}">
+    <!-- 总学分进度 -->
+    <view class="credit-card">
+      <view class="credit-header">
+        <text class="credit-title">📊 学业分析报告</text>
+        <text class="credit-time">更新时间: {{report.updateTime}}</text>
+      </view>
+      
+      <view class="credit-overview">
+        <view class="credit-ring">
+          <view class="ring-bg"></view>
+          <view class="ring-progress" style="transform: rotate({{report.percent * 3.6}}deg)"></view>
+          <view class="ring-center">
+            <text class="ring-percent">{{report.percent}}%</text>
+          </view>
+        </view>
+        <view class="credit-info">
+          <text class="credit-current">{{report.currentCredits}}</text>
+          <text class="credit-sep">/</text>
+          <text class="credit-total">{{report.totalCredits}}</text>
+          <text class="credit-label">已获学分</text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 分类学分 -->
+    <view class="module-card">
+      <view class="module-title">学分完成情况</view>
+      <view class="module-list">
+        <view 
+          wx:for="{{report.modules}}"
+          wx:key="name"
+          class="module-item"
+        >
+          <view class="module-info">
+            <text class="module-name">{{item.name}}</text>
+            <text class="module-count">{{item.current}}/{{item.total}}</text>
+          </view>
+          <view class="module-bar">
+            <view class="module-progress" style="width: {{item.current / item.total * 100}}%"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 预警信息 -->
+    <view class="warning-card" wx:if="{{report.warnings && report.warnings.length > 0}}">
+      <view class="warning-header">
+        <text class="warning-icon">⚠️</text>
+        <text class="warning-title">学业预警</text>
+      </view>
+      <view 
+        wx:for="{{report.warnings}}"
+        wx:key="index"
+        class="warning-item"
+      >
+        <text>{{item}}</text>
+      </view>
+    </view>
+    
+    <!-- 未通过课程 -->
+    <view class="failed-card" wx:if="{{report.failedCourses && report.failedCourses.length > 0}}">
+      <view class="failed-title">需重修课程</view>
+      <view class="failed-list">
+        <view 
+          wx:for="{{report.failedCourses}}"
+          wx:key="index"
+          class="failed-item"
+        >
+          <text class="failed-name">{{item.name}}</text>
+          <text class="failed-score">{{item.score}}分</text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 操作按钮 -->
+    <view class="action-bar">
+      <button class="upload-btn" bindtap="goToUpload">上传新成绩单</button>
+      <button class="detail-btn" bindtap="goToReport">查看完整报告</button>
+    </view>
+  </view>
+  
+  <!-- 无数据 -->
+  <view wx:if="{{!loading && !report}}" class="empty-state">
+    <text class="empty-icon">📚</text>
+    <text class="empty-text">暂无学业数据</text>
+    <button class="upload-btn" bindtap="goToUpload">上传成绩单</button>
+  </view>
+  
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-state">
+    <text>加载中...</text>
+  </view>
+</view>

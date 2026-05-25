@@ -1,0 +1,63 @@
+<!-- sub-pages/settings/index.wxml -->
+<view class="container">
+  <!-- 通知设置 -->
+  <view class="section">
+    <view class="section-title">通知设置</view>
+    <view class="setting-item">
+      <text class="setting-label">系统通知</text>
+      <switch 
+        checked="{{notifications.system}}"
+        bindchange="onNotificationChange"
+        data-type="system"
+      />
+    </view>
+    <view class="setting-item">
+      <text class="setting-label">活动通知</text>
+      <switch 
+        checked="{{notifications.activity}}"
+        bindchange="onNotificationChange"
+        data-type="activity"
+      />
+    </view>
+    <view class="setting-item">
+      <text class="setting-label">消息通知</text>
+      <switch 
+        checked="{{notifications.message}}"
+        bindchange="onNotificationChange"
+        data-type="message"
+      />
+    </view>
+  </view>
+
+  <!-- 缓存管理 -->
+  <view class="section">
+    <view class="section-title">缓存管理</view>
+    <view class="setting-item" bindtap="handleClearCache">
+      <text class="setting-label">清除缓存</text>
+      <view class="setting-value">
+        <text class="cache-size">{{cacheSize}}</text>
+        <text class="arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 关于 -->
+  <view class="section">
+    <view class="section-title">关于</view>
+    <view class="setting-item" bindtap="goToAgreement">
+      <text class="setting-label">用户协议</text>
+      <text class="arrow">›</text>
+    </view>
+    <view class="setting-item" bindtap="goToPrivacy">
+      <text class="setting-label">隐私政策</text>
+      <text class="arrow">›</text>
+    </view>
+    <view class="setting-item" bindtap="handleCheckUpdate">
+      <text class="setting-label">检查更新</text>
+      <view class="setting-value">
+        <text class="version">v{{version}}</text>
+        <text class="arrow">›</text>
+      </view>
+    </view>
+  </view>
+</view>

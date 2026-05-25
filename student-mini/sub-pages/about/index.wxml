@@ -1,0 +1,60 @@
+<!-- sub-pages/about/index.wxml -->
+<view class="container">
+  <view class="header">
+    <image class="logo" src="/static/images/logo.png" mode="aspectFit" />
+    <text class="app-name">学院服务平台</text>
+    <text class="version">V{{version}}</text>
+  </view>
+  
+  <view class="content">
+    <text class="desc">
+      学院服务平台是一款专为学生打造的综合性服务平台，提供学业分析、证明申请、政策查询、党团服务等功能，让校园生活更加便捷。
+    </text>
+  </view>
+  
+  <view class="section">
+    <view class="section-title">功能介绍</view>
+    <view class="feature-list">
+      <view class="feature-item">
+        <text class="feature-icon">📊</text>
+        <text class="feature-name">学业分析</text>
+        <text class="feature-desc">查看学业报告，分析成绩趋势</text>
+      </view>
+      <view class="feature-item">
+        <text class="feature-icon">📝</text>
+        <text class="feature-name">证明申请</text>
+        <text class="feature-desc">在线申请各类证明材料</text>
+      </view>
+      <view class="feature-item">
+        <text class="feature-icon">📋</text>
+        <text class="feature-name">政策查询</text>
+        <text class="feature-desc">浏览学校政策文件和通知</text>
+      </view>
+      <view class="feature-item">
+        <text class="feature-icon">🎗️</text>
+        <text class="feature-name">党团服务</text>
+        <text class="feature-desc">了解入党入团流程</text>
+      </view>
+    </view>
+  </view>
+  
+  <view class="section">
+    <view class="section-title">相关信息</view>
+    <view class="link-item" bindtap="goToAgreement">
+      <text class="link-name">用户协议</text>
+      <text class="arrow">›</text>
+    </view>
+    <view class="link-item" bindtap="goToPrivacy">
+      <text class="link-name">隐私政策</text>
+      <text class="arrow">›</text>
+    </view>
+    <view class="info-item">
+      <text class="info-label">版本号</text>
+      <text class="info-value">v{{version}}</text>
+    </view>
+    <view class="info-item">
+      <text class="info-label">更新日期</text>
+      <text class="info-value">{{updateTime}}</text>
+    </view>
+  </view>
+</view>

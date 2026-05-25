@@ -1,0 +1,196 @@
+/* sub-pages/party/index.wxss */
+.container {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+/* Tab */
+.tabs {
+  display: flex;
+  background: #ffffff;
+  padding: 0 32rpx;
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 28rpx 0;
+  font-size: 30rpx;
+  color: #666;
+  position: relative;
+}
+
+.tab-item.active {
+  color: #1677ff;
+  font-weight: 600;
+}
+
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64rpx;
+  height: 6rpx;
+  background: #1677ff;
+  border-radius: 3rpx;
+}
+
+/* 进度卡片 */
+.progress-card,
+.flow-card {
+  background: #ffffff;
+  margin: 24rpx;
+  border-radius: 16rpx;
+  padding: 32rpx;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32rpx;
+}
+
+.progress-title,
+.flow-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.progress-arrow {
+  font-size: 36rpx;
+  color: #ccc;
+}
+
+/* 时间轴 */
+.timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  padding-bottom: 32rpx;
+  position: relative;
+}
+
+.timeline-item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 12rpx;
+  top: 32rpx;
+  bottom: 0;
+  width: 2rpx;
+  background: #e0e0e0;
+}
+
+.timeline-dot {
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: 12rpx;
+  background: #ccc;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+  margin-top: 4rpx;
+}
+
+.timeline-dot.completed {
+  background: #52c41a;
+}
+
+.timeline-dot.processing {
+  background: #1677ff;
+}
+
+.timeline-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.node-name {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.node-status {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+
+.node-status.completed {
+  color: #52c41a;
+}
+
+.node-status.processing {
+  color: #1677ff;
+}
+
+/* 无进度 */
+.no-progress {
+  text-align: center;
+  padding: 48rpx 0;
+  color: #999;
+  font-size: 28rpx;
+}
+
+/* 流程节点 */
+.flow-nodes {
+  display: flex;
+  flex-direction: column;
+  gap: 32rpx;
+}
+
+.flow-node {
+  display: flex;
+  align-items: flex-start;
+}
+
+.node-index {
+  width: 48rpx;
+  height: 48rpx;
+  background: #1677ff;
+  color: #ffffff;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  font-weight: 600;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+
+.node-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.node-title {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.node-desc {
+  font-size: 24rpx;
+  color: #666;
+  margin-top: 8rpx;
+  line-height: 1.6;
+}
+
+/* 加载状态 */
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 200rpx 0;
+  color: #999;
+  font-size: 28rpx;
+}

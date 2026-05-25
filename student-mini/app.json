@@ -1,0 +1,127 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/message/index",
+    "pages/message/detail",
+    "pages/profile/index"
+  ],
+  "subpackages": [
+    {
+      "root": "sub-pages/login",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "root": "sub-pages/search",
+      "pages": [
+        "index",
+        "result"
+      ]
+    },
+    {
+      "root": "sub-pages/policy",
+      "pages": [
+        "list",
+        "detail"
+      ]
+    },
+    {
+      "root": "sub-pages/faq",
+      "pages": [
+        "list",
+        "ticket",
+        "submit"
+      ]
+    },
+    {
+      "root": "sub-pages/apply",
+      "pages": [
+        "list",
+        "new",
+        "detail"
+      ]
+    },
+    {
+      "root": "sub-pages/party",
+      "pages": [
+        "index",
+        "progress",
+        "detail"
+      ]
+    },
+    {
+      "root": "sub-pages/academic",
+      "pages": [
+        "index",
+        "upload",
+        "report"
+      ]
+    },
+    {
+      "root": "sub-pages/feedback",
+      "pages": [
+        "form",
+        "history"
+      ]
+    },
+    {
+      "root": "sub-pages/settings",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "root": "sub-pages/about",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "root": "sub-pages/agreement",
+      "pages": [
+        "index"
+      ]
+    }
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#1677ff",
+    "navigationBarTitleText": "学院服务平台",
+    "navigationBarTextStyle": "white"
+  },
+  "tabBar": {
+    "color": "#666666",
+    "selectedColor": "#1677ff",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/icons/home.png",
+        "selectedIconPath": "static/icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/message/index",
+        "text": "消息",
+        "iconPath": "static/icons/message.png",
+        "selectedIconPath": "static/icons/message-active.png"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的",
+        "iconPath": "static/icons/profile.png",
+        "selectedIconPath": "static/icons/profile-active.png"
+      }
+    ]
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "你的位置信息将用于提供更好的服务"
+    }
+  },
+  "requiredBackgroundModes": [],
+  "usingComponents": {},
+  "lazyCodeLoading": "requiredComponents"
+}

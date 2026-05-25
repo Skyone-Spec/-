@@ -1,0 +1,32 @@
+<!-- sub-pages/faq/ticket.wxml -->
+<view class="container">
+  <view class="list">
+    <view 
+      wx:for="{{tickets}}"
+      wx:key="id"
+      class="ticket-item"
+      bindtap="goToDetail"
+      data-id="{{item.id}}"
+    >
+      <view class="ticket-header">
+        <text class="ticket-title">工单 #{{item.id}}</text>
+        <text class="ticket-status status-{{item.status}}">{{item.statusText}}</text>
+      </view>
+      <view class="ticket-content">
+        <text>{{item.content}}</text>
+      </view>
+      <view class="ticket-footer">
+        <text class="ticket-time">{{item.createTime}}</text>
+        <text class="ticket-reply" wx:if="{{item.replyCount > 0}}">{{item.replyCount}}条回复</text>
+      </view>
+    </view>
+  </view>
+  
+  <view wx:if="{{!loading && tickets.length === 0}}" class="empty-state">
+    <text>暂无工单记录</text>
+  </view>
+  
+  <view wx:if="{{loading}}" class="loading-more">
+    <text>加载中...</text>
+  </view>
+</view>

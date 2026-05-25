@@ -1,0 +1,59 @@
+<!-- sub-pages/feedback/form.wxml -->
+<view class="container">
+  <view class="form-card">
+    <view class="form-item">
+      <view class="form-label">反馈类型 <text class="required">*</text></view>
+      <picker mode="selector" range="{{types}}" range-key="name" bindchange="onTypeChange">
+        <view class="picker-value">
+          {{types[type - 1].name}}
+        </view>
+      </picker>
+    </view>
+    
+    <view class="form-item">
+      <view class="form-label">反馈内容 <text class="required">*</text></view>
+      <textarea 
+        class="form-textarea" 
+        placeholder="请详细描述您的问题或建议..."
+        value="{{content}}"
+        bindinput="onContentInput"
+      />
+    </view>
+    
+    <view class="form-item">
+      <view class="form-label">联系方式 <text class="optional">(选填)</text></view>
+      <input 
+        class="form-input" 
+        type="text" 
+        placeholder="手机号或邮箱"
+        value="{{contact}}"
+        bindinput="onContactInput"
+      />
+    </view>
+    
+    <view class="form-item">
+      <view class="form-label">截图附件 <text class="optional">(选填，最多3张)</text></view>
+      <view class="image-list">
+        <view 
+          wx:for="{{attachments}}"
+          wx:key="index"
+          class="image-item"
+        >
+          <image src="{{item}}" mode="aspectFill" />
+        </view>
+        <view class="add-image" bindtap="chooseImage" wx:if="{{attachments.length < 3}}">
+          <text class="add-icon">+</text>
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <view class="bottom-bar">
+    <button 
+      class="submit-btn" 
+      bindtap="handleSubmit"
+      loading="{{submitting}}"
+      disabled="{{submitting}}"
+    >提交反馈</button>
+  </view>
+</view>

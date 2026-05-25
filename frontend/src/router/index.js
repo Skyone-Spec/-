@@ -18,6 +18,7 @@ import PolicyManagement from '../views/PolicyManagement.vue'
 import QATicket from '../views/QATicket.vue'
 import KeywordSearch from '../views/KeywordSearch.vue'
 import DataScope from '../views/DataScope.vue'
+import studentRoutes from './student'
 
 const routes = [
   {
@@ -123,7 +124,7 @@ const routes = [
 
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
-  routes
+  routes: [...routes, ...studentRoutes]
 })
 
 export default router

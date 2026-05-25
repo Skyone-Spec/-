@@ -1,0 +1,36 @@
+<!-- sub-pages/policy/detail.wxml -->
+<view class="container">
+  <view wx:if="{{detail && !loading}}" class="detail-content">
+    <view class="detail-header">
+      <text class="detail-title">{{detail.title}}</text>
+      <view class="detail-meta">
+        <text class="detail-date">{{detail.publishDate}}</text>
+        <text class="detail-source" wx:if="{{detail.source}}">{{detail.source}}</text>
+      </view>
+    </view>
+    
+    <view class="detail-body">
+      <rich-text nodes="{{detail.content}}"></rich-text>
+    </view>
+    
+    <view class="detail-attachments" wx:if="{{detail.attachments && detail.attachments.length > 0}}">
+      <view class="attachment-title">附件</view>
+      <view 
+        wx:for="{{detail.attachments}}"
+        wx:key="id"
+        class="attachment-item"
+        bindtap="downloadFile"
+        data-url="{{item.url}}"
+        data-name="{{item.name}}"
+      >
+        <text class="attachment-icon">📎</text>
+        <text class="attachment-name">{{item.name}}</text>
+        <text class="attachment-download">下载</text>
+      </view>
+    </view>
+  </view>
+  
+  <view wx:if="{{loading}}" class="loading-state">
+    <text>加载中...</text>
+  </view>
+</view>

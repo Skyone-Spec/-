@@ -1,0 +1,55 @@
+<!-- pages/index/index.wxml -->
+<view class="container">
+  <!-- 顶部欢迎 -->
+  <view class="welcome-bar">
+    <view class="welcome-info">
+      <text class="welcome-text">您好，{{userInfo.name || '同学'}}</text>
+      <text class="welcome-date">{{date}}</text>
+    </view>
+    <view class="message-btn" bindtap="goToMessage">
+      <text class="message-icon">🔔</text>
+      <text class="message-badge" wx:if="{{unreadCount > 0}}">{{unreadCount}}</text>
+    </view>
+  </view>
+  
+  <!-- 轮播图 -->
+  <swiper class="banner" indicator-dots autoplay circular>
+    <swiper-item wx:for="{{banners}}" wx:key="id">
+      <image src="{{item.image}}" mode="aspectFill" />
+    </swiper-item>
+  </swiper>
+  
+  <!-- 功能入口 -->
+  <view class="entry-grid">
+    <view class="entry-item" bindtap="goToPolicy">
+      <text class="entry-icon">📋</text>
+      <text class="entry-name">政策文件</text>
+    </view>
+    <view class="entry-item" bindtap="goToAcademic">
+      <text class="entry-icon">📊</text>
+      <text class="entry-name">学业分析</text>
+    </view>
+    <view class="entry-item" bindtap="goToApply">
+      <text class="entry-icon">📝</text>
+      <text class="entry-name">证明申请</text>
+    </view>
+    <view class="entry-item" bindtap="goToParty">
+      <text class="entry-icon">🎗️</text>
+      <text class="entry-name">党团流程</text>
+    </view>
+  </view>
+  
+  <!-- 最新动态 -->
+  <view class="news-section">
+    <view class="section-header">
+      <text class="section-title">最新动态</text>
+      <text class="section-more" bindtap="goToMessage">更多 ›</text>
+    </view>
+    <view class="news-list">
+      <view wx:for="{{news}}" wx:key="id" class="news-item" bindtap="goToNewsDetail" data-id="{{item.id}}">
+        <text class="news-title">{{item.title}}</text>
+        <text class="news-time">{{item.time}}</text>
+      </view>
+    </view>
+  </view>
+</view>

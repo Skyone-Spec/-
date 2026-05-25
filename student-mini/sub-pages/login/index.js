@@ -1,0 +1,117 @@
+// sub-pages/login/index.js
+const app = getApp()
+const api = require('../../api/auth')
+
+Page({
+  data: {
+    name: '',
+    studentNo: '',
+    password: '',
+    loading: false,
+    errorCount: 0,
+    locked: false,
+    lockTime: 0
+  },
+  
+  onLoad() {
+    // 检查是否已登录
+    if (app.isLoggedIn()) {
+      wx.switchTab({
+        url: '/pages/index/index'
+      })
+    }
+  },
+  
+  // 输入处理
+  onNameInput(e) {
+    this.setData({ name: e.detail.value })
+  },
+  
+  onStudentNoInput(e) {
+    this.setData({ studentNo: e.detail.value })
+  },
+  
+  onPasswordInput(e) {
+    this.setData({ password: e.detail.value })
+  },
+  
+  // 登录提交
+  async handleLogin() {
+    const { name, studentNo, password, loading, locked } = this.data
+    
+    if (locked) {
+      wx.showToast({ title: `请${this.data.lockTime}秒后再试`, icon: 'none' })
+      return
+    }
+    
+    if (loading) return
+    
+    // 表单验证
+    if (!name.trim()) {
+      wx.showToast({ title: '请输入真实姓名', icon: 'none' })
+      return
+    }
+    
+    if (!studentNo.trim()) {
+      wx.showToast({ title: '请输入学号', icon: 'none' })
+      return
+    }
+    
+    this.setData({ loading: true })
+    
+    try {
+      // 使用后端 /auth/login 接口
+      const res = await api.login({
+        username: studentNo.trim(),
+        password: password || '123456' // 默认密码 123456
+      })
+      
+      // 保存登录数据
+      app.setLoginData(res.data.token, {
+        id: res.data.userId,
+        studentId: res.data.userId,
+        name: name.trim(),
+        studentNo: studentNo.trim(),
+        role: res.data.role
+      })
+      
+      wx.showToast({ title: '登录成功', icon: 'success' })
+      
+      setTimeout(() => {
+        wx.switchTab({
+          url: '/pages/index/index'
+        })
+      }, 1000)
+      
+    } catch (e) {
+      console.error('登录失败', e)
+      wx.showToast({ title: e.message || '登录失败，请检查账号密码', icon: 'none' })
+      
+      // 累计失败次数
+      const newCount = this.data.errorCount + 1
+      this.setData({ errorCount: newCount })
+      
+      if (newCount >= 5) {
+        // 锁定30分钟
+        this.startLock(30 * 60)
+      }
+    } finally {
+      this.setData({ loading: false })
+    }
+  },
+  
+  // 锁定处理
+  startLock(seconds) {
+    this.setData({ locked: true, lockTime: seconds })
+    
+    const timer = setInterval(() => {
+      const time = this.data.lockTime - 1
+      if (time <= 0) {
+        clearInterval(timer)
+        this.setData({ locked: false, lockTime: 0, errorCount: 0 })
+      } else {
+        this.setData({ lockTime: time })
+      }
+    }, 1000)
+  }
+})

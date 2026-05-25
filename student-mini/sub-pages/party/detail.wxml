@@ -1,0 +1,39 @@
+<!-- sub-pages/party/detail.wxml -->
+<view class="container">
+  <view wx:if="{{detail && !loading}}">
+    <view class="header-card">
+      <text class="header-title">{{detail.title}}</text>
+      <text class="header-desc">{{detail.description}}</text>
+    </view>
+    
+    <view class="content-card">
+      <view class="content-title">申请条件</view>
+      <view class="content-text">{{detail.conditions}}</view>
+    </view>
+    
+    <view class="content-card">
+      <view class="content-title">所需材料</view>
+      <view class="content-list">
+        <text wx:for="{{detail.materials}}" wx:key="index" class="content-item">• {{item}}</text>
+      </view>
+    </view>
+    
+    <view class="content-card">
+      <view class="content-title">办理流程</view>
+      <view class="process-list">
+        <view wx:for="{{detail.process}}" wx:key="index" class="process-item">
+          <text class="process-num">{{index + 1}}</text>
+          <text class="process-text">{{item}}</text>
+        </view>
+      </view>
+    </view>
+    
+    <view class="action-bar">
+      <button class="apply-btn" bindtap="handleApply">立即申请</button>
+    </view>
+  </view>
+  
+  <view wx:if="{{loading}}" class="loading-state">
+    <text>加载中...</text>
+  </view>
+</view>
