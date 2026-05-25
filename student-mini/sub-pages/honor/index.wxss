@@ -1,0 +1,254 @@
+.page {
+  min-height: 100vh;
+  background: #f4f7fb;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.hero {
+  min-height: 220rpx;
+  border-radius: 16rpx;
+  padding: 34rpx;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #125bd8 0%, #1683ff 58%, #17b8c8 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+  box-shadow: 0 18rpx 42rpx rgba(22, 119, 255, 0.24);
+}
+
+.hero-kicker {
+  display: block;
+  font-size: 22rpx;
+  opacity: 0.78;
+  letter-spacing: 0;
+}
+
+.hero-title {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 48rpx;
+  font-weight: 800;
+}
+
+.hero-subtitle {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 25rpx;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.hero-medal {
+  width: 116rpx;
+  height: 116rpx;
+  border-radius: 58rpx;
+  background: rgba(255, 255, 255, 0.18);
+  border: 2rpx solid rgba(255, 255, 255, 0.34);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.search-card {
+  margin-top: 24rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 22rpx;
+  box-shadow: 0 10rpx 30rpx rgba(24, 52, 92, 0.06);
+}
+
+.search-box {
+  height: 76rpx;
+  border-radius: 12rpx;
+  background: #f3f6fb;
+  display: flex;
+  align-items: center;
+  padding: 0 22rpx;
+  gap: 14rpx;
+}
+
+.search-icon,
+.clear-btn {
+  color: #7b8ba5;
+  font-size: 32rpx;
+}
+
+.search-box input {
+  flex: 1;
+  min-width: 0;
+  font-size: 27rpx;
+  color: #1f2d3d;
+}
+
+.filter-row {
+  margin-top: 18rpx;
+  display: flex;
+  gap: 16rpx;
+}
+
+.filter-chip {
+  min-width: 112rpx;
+  height: 58rpx;
+  border-radius: 29rpx;
+  background: #f2f5f9;
+  color: #58677d;
+  font-size: 25rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.filter-chip.active {
+  background: #1677ff;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.result-meta {
+  margin: 26rpx 8rpx 12rpx;
+  color: #718198;
+  font-size: 24rpx;
+}
+
+.honor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22rpx;
+}
+
+.honor-card {
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 26rpx;
+  box-shadow: 0 12rpx 32rpx rgba(21, 42, 72, 0.07);
+}
+
+.card-top,
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.highlight-block {
+  flex: 1;
+  min-width: 0;
+  min-height: 92rpx;
+  border-radius: 14rpx;
+  padding: 16rpx 18rpx;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #1677ff, #26a7ff);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.highlight-year {
+  font-size: 34rpx;
+  font-weight: 800;
+}
+
+.highlight-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 25rpx;
+  line-height: 1.35;
+}
+
+.type-pill {
+  height: 52rpx;
+  padding: 0 18rpx;
+  border-radius: 26rpx;
+  background: #eef7f7;
+  color: #0d9488;
+  font-size: 24rpx;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.honor-title {
+  display: block;
+  margin-top: 24rpx;
+  color: #172235;
+  font-size: 32rpx;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.honor-summary {
+  display: block;
+  margin-top: 12rpx;
+  color: #637083;
+  font-size: 25rpx;
+  line-height: 1.6;
+}
+
+.card-footer {
+  margin-top: 24rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #edf1f6;
+}
+
+.recipient-count {
+  color: #718198;
+  font-size: 24rpx;
+}
+
+.detail-link {
+  color: #1677ff;
+  font-size: 25rpx;
+  font-weight: 600;
+}
+
+.empty-state,
+.loading-state,
+.end-state {
+  color: #8a98aa;
+  font-size: 26rpx;
+  text-align: center;
+  padding: 60rpx 0;
+}
+
+.empty-state {
+  padding-top: 120rpx;
+}
+
+.empty-mark {
+  width: 120rpx;
+  height: 120rpx;
+  margin: 0 auto 24rpx;
+  border-radius: 60rpx;
+  background: #eaf3ff;
+  color: #1677ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  font-weight: 800;
+}
+
+.empty-title,
+.empty-desc {
+  display: block;
+}
+
+.empty-title {
+  color: #314056;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.empty-desc {
+  margin-top: 12rpx;
+  color: #8a98aa;
+  font-size: 25rpx;
+}

@@ -37,6 +37,12 @@
       <text class="entry-icon">🎗️</text>
       <text class="entry-name">党团流程</text>
     </view>
+    <view class="entry-item" bindtap="goToHonor">
+      <view class="entry-icon-badge">奖</view>
+      <view class="entry-text">
+        <text class="entry-name">奖助信息</text>
+      </view>
+    </view>
   </view>
   
   <!-- 最新动态 -->

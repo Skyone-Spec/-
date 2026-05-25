@@ -59,6 +59,14 @@
       ]
     },
     {
+      "root": "sub-pages/honor",
+      "pages": [
+        "index",
+        "detail",
+        "recipient"
+      ]
+    },
+    {
       "root": "sub-pages/feedback",
       "pages": [
         "form",

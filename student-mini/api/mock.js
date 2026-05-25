@@ -322,7 +322,157 @@ const mockData = {
  * @param {string} url - API 路径
  * @param {object} params - 请求参数
  */
+const honorShowcases = [
+  {
+    id: 101,
+    awardYear: 2024,
+    honorCategory: '信息学院国家奖学金',
+    recipientType: 'PERSONAL',
+    title: '2024年信息学院国家奖学金',
+    description: '展示信息学院在国家奖学金评选中表现突出的学生代表。'
+  },
+  {
+    id: 102,
+    awardYear: 2024,
+    honorCategory: '优秀学生集体',
+    recipientType: 'COLLECTIVE',
+    title: '2024年信息学院优秀学生集体',
+    description: '展示班级建设、学风引领和志愿服务等方面表现突出的优秀集体。'
+  },
+  {
+    id: 103,
+    awardYear: 2023,
+    honorCategory: '社会工作奖学金',
+    recipientType: 'PERSONAL',
+    title: '2023年社会工作奖学金',
+    description: '记录在学生工作、公共服务和校园治理中积极贡献的同学。'
+  }
+]
+
+const honorRecipients = [
+  {
+    id: 201,
+    showcaseId: 101,
+    recipientType: 'PERSONAL',
+    recipientName: '张一鸣',
+    major: '计算机科学与技术',
+    grade: '2021级',
+    className: '计科1班',
+    awardIntro: '连续三年综合测评位列专业前列，主持大学生创新训练项目并获得校级优秀结项。',
+    advancedDeeds: '他长期参与开源社区和朋辈辅导，累计服务同学超过120小时，将课程笔记整理为共享资料，带动班级形成互帮互学的氛围。',
+    photoFileId: null,
+    members: [],
+    attachments: [
+      { id: 301, fileId: 9001, attachmentType: 'PHOTO', fileName: 'recipient-zhang.png', contentType: 'image/png', fileSize: 0, storagePath: '/static/images/banner1.png', caption: '获奖风采' }
+    ]
+  },
+  {
+    id: 202,
+    showcaseId: 101,
+    recipientType: 'PERSONAL',
+    recipientName: '李清扬',
+    major: '数据科学与大数据技术',
+    grade: '2022级',
+    className: '数科2班',
+    awardIntro: '学习成绩优异，积极参与科研训练，在数据治理方向形成阶段性成果。',
+    advancedDeeds: '她担任课程助教和班级学习委员，主动组织算法训练营，帮助多名同学完成竞赛备赛和课程复习。',
+    photoFileId: null,
+    members: [],
+    attachments: []
+  },
+  {
+    id: 203,
+    showcaseId: 102,
+    recipientType: 'COLLECTIVE',
+    recipientName: '2021级计算机科学与技术1班',
+    major: '计算机科学与技术',
+    grade: '2021级',
+    className: '计科1班',
+    awardIntro: '班级学风扎实、凝聚力强，在课程学习、科研竞赛、志愿服务中表现突出。',
+    advancedDeeds: '班级建立学习互助小组和项目共创机制，全年开展主题团日、公益服务和专业分享活动二十余次。',
+    photoFileId: null,
+    members: [
+      { id: 401, studentName: '王思远', major: '计算机科学与技术', grade: '2021级', className: '计科1班', memberRole: '班长' },
+      { id: 402, studentName: '周雨涵', major: '计算机科学与技术', grade: '2021级', className: '计科1班', memberRole: '学习委员' }
+    ],
+    attachments: [
+      { id: 302, fileId: 9002, attachmentType: 'PHOTO', fileName: 'class-photo.png', contentType: 'image/png', fileSize: 0, storagePath: '/static/images/banner2.png', caption: '集体合影' }
+    ]
+  },
+  {
+    id: 204,
+    showcaseId: 103,
+    recipientType: 'PERSONAL',
+    recipientName: '陈嘉宁',
+    major: '软件工程',
+    grade: '2020级',
+    className: '软工1班',
+    awardIntro: '积极参与学院学生工作，在迎新、就业服务和心理健康活动中表现突出。',
+    advancedDeeds: '她注重把服务做细做实，参与搭建毕业生经验分享资料库，协助学院提升学生服务效率。',
+    photoFileId: null,
+    members: [],
+    attachments: []
+  }
+]
+
+const getHonorMockData = (url, params = {}) => {
+  if (url === '/student/honors/page') {
+    const page = Number(params.page || 0)
+    const size = Number(params.size || 10)
+    const keyword = (params.keyword || '').trim()
+    const recipientType = params.recipientType || ''
+    let content = honorShowcases.filter((item) => {
+      const matchesType = !recipientType || item.recipientType === recipientType
+      const matchesKeyword = !keyword || `${item.awardYear}${item.honorCategory}${item.title}${item.description}`.includes(keyword)
+      return matchesType && matchesKeyword
+    })
+    content = content.map((item) => ({
+      ...item,
+      recipientCount: honorRecipients.filter((recipient) => recipient.showcaseId === item.id).length,
+      recipients: []
+    }))
+    const start = page * size
+    return {
+      data: {
+        content: content.slice(start, start + size),
+        totalElements: content.length,
+        totalPages: Math.ceil(content.length / size),
+        page,
+        size
+      },
+      success: true
+    }
+  }
+
+  const showcaseMatch = url.match(/^\/student\/honors\/(\d+)$/)
+  if (showcaseMatch) {
+    const id = Number(showcaseMatch[1])
+    const showcase = honorShowcases.find((item) => item.id === id)
+    const recipients = honorRecipients.filter((item) => item.showcaseId === id)
+    return { data: { ...showcase, recipientCount: recipients.length, recipients }, success: true }
+  }
+
+  const recipientsMatch = url.match(/^\/student\/honors\/(\d+)\/recipients$/)
+  if (recipientsMatch) {
+    const id = Number(recipientsMatch[1])
+    return { data: honorRecipients.filter((item) => item.showcaseId === id), success: true }
+  }
+
+  const recipientMatch = url.match(/^\/student\/honors\/recipients\/(\d+)$/)
+  if (recipientMatch) {
+    const id = Number(recipientMatch[1])
+    return { data: honorRecipients.find((item) => item.id === id), success: true }
+  }
+
+  return null
+}
+
 exports.getMockData = (url, params = {}) => {
+  const honorMock = getHonorMockData(url, params)
+  if (honorMock) {
+    return honorMock
+  }
+
   // 直接匹配完整 URL
   if (mockData[url]) {
     console.log('[Mock] 匹配到:', url)

@@ -1,0 +1,72 @@
+<view class="page">
+  <view class="hero">
+    <view>
+      <text class="hero-kicker">HONOR WALL</text>
+      <text class="hero-title">奖助信息</text>
+      <text class="hero-subtitle">查看学院奖学金、荣誉称号与优秀集体展示</text>
+    </view>
+    <view class="hero-medal">奖</view>
+  </view>
+
+  <view class="search-card">
+    <view class="search-box">
+      <text class="search-icon">⌕</text>
+      <input
+        value="{{keyword}}"
+        confirm-type="search"
+        placeholder="搜索年份、类别或奖项"
+        bindinput="onSearchInput"
+        bindconfirm="onSearchConfirm"
+      />
+      <text wx:if="{{keyword}}" class="clear-btn" bindtap="clearSearch">×</text>
+    </view>
+    <view class="filter-row">
+      <view
+        wx:for="{{filters}}"
+        wx:key="value"
+        class="filter-chip {{activeType === item.value ? 'active' : ''}}"
+        data-value="{{item.value}}"
+        bindtap="onFilterTap"
+      >
+        {{item.label}}
+      </view>
+    </view>
+  </view>
+
+  <view class="result-meta" wx:if="{{totalElements > 0}}">
+    <text>共 {{totalElements}} 个公开展示模块</text>
+  </view>
+
+  <view class="honor-list">
+    <view
+      wx:for="{{honors}}"
+      wx:key="id"
+      class="honor-card"
+      bindtap="goToDetail"
+      data-id="{{item.id}}"
+    >
+      <view class="card-top">
+        <view class="highlight-block">
+          <text class="highlight-year">{{item.awardYear}}</text>
+          <text class="highlight-label">{{item.honorCategory}}</text>
+        </view>
+        <text class="type-pill">{{item.typeText}}</text>
+      </view>
+      <text class="honor-title">{{item.displayTitle}}</text>
+      <text class="honor-summary">{{item.summary}}</text>
+      <view class="card-footer">
+        <text class="recipient-count">{{item.countText}}</text>
+        <text class="detail-link">查看详情</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && honors.length === 0}}" class="empty-state">
+    <view class="empty-mark">奖</view>
+    <text class="empty-title">暂无公开奖助信息</text>
+    <text class="empty-desc">可尝试更换筛选条件或稍后查看</text>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-state">加载中...</view>
+  <view wx:if="{{!loading && honors.length > 0 && !hasMore}}" class="end-state">已展示全部内容</view>
+</view>

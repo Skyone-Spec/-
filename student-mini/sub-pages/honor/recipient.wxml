@@ -1,0 +1,50 @@
+<view class="page">
+  <view wx:if="{{recipient && !loading}}">
+    <view class="profile-card">
+      <view class="avatar">{{recipient.initial}}</view>
+      <view class="profile-main">
+        <text class="name">{{recipient.recipientName}}</text>
+        <text wx:if="{{recipient.meta}}" class="meta">{{recipient.meta}}</text>
+      </view>
+    </view>
+
+    <view class="content-card" wx:if="{{recipient.awardIntro}}">
+      <view class="section-title">获奖简介</view>
+      <text class="body-text">{{recipient.awardIntro}}</text>
+    </view>
+
+    <view class="content-card" wx:if="{{recipient.advancedDeeds}}">
+      <view class="section-title">先进事迹</view>
+      <text class="body-text">{{recipient.advancedDeeds}}</text>
+    </view>
+
+    <view class="content-card" wx:if="{{recipient.members.length > 0}}">
+      <view class="section-title">集体成员</view>
+      <view class="member-list">
+        <view wx:for="{{recipient.members}}" wx:key="id" class="member-item">
+          <text class="member-name">{{item.studentName}}</text>
+          <text class="member-meta">{{item.memberRole || '成员'}} · {{item.grade || ''}} {{item.major || ''}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="content-card" wx:if="{{recipient.attachments.length > 0}}">
+      <view class="section-title">照片与材料</view>
+      <view class="attachment-grid">
+        <view
+          wx:for="{{recipient.attachments}}"
+          wx:key="id"
+          class="attachment-item"
+          data-url="{{item.imageUrl}}"
+          bindtap="previewImage"
+        >
+          <image wx:if="{{item.isPhoto && item.imageUrl}}" src="{{item.imageUrl}}" mode="aspectFill" />
+          <view wx:else class="file-tile">{{item.typeText}}</view>
+          <text class="attachment-name">{{item.caption || item.fileName}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-state">加载中...</view>
+</view>

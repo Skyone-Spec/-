@@ -76,6 +76,10 @@ Page({
   goToParty() {
     wx.navigateTo({ url: '/sub-pages/party/index' })
   },
+
+  goToHonor() {
+    wx.navigateTo({ url: '/sub-pages/honor/index' })
+  },
   
   // 跳转新闻详情
   goToNewsDetail(e) {
