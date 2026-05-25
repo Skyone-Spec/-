@@ -5,6 +5,7 @@ import edu.ruc.platform.common.enums.RoleType;
 import edu.ruc.platform.common.security.RequireRoles;
 import edu.ruc.platform.party.dto.*;
 import edu.ruc.platform.party.service.PartyMaterialApplicationService;
+import edu.ruc.platform.party.service.PartyReminderNotificationService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import java.util.List;
 public class PartyMaterialController {
 
     private final PartyMaterialApplicationService partyMaterialService;
+    private final PartyReminderNotificationService reminderNotificationService;
 
     @PostMapping
     @RequireRoles({RoleType.STUDENT, RoleType.LEAGUE_SECRETARY, RoleType.CLASS_LEADER})
@@ -80,5 +82,13 @@ public class PartyMaterialController {
             @RequestParam(required = false) String grade,
             @RequestParam(required = false) String className) {
         return ApiResponse.success(partyMaterialService.listClassProgress(grade, className));
+    }
+
+    @GetMapping("/reminders/student/{studentId}")
+    @RequireRoles({RoleType.STUDENT, RoleType.LEAGUE_SECRETARY, RoleType.CLASS_LEADER,
+            RoleType.COUNSELOR, RoleType.CLASS_ADVISOR, RoleType.COLLEGE_ADMIN, RoleType.SUPER_ADMIN})
+    public ApiResponse<List<PartyReminderNotificationService.ReminderRecord>> listReminders(
+            @Positive(message = "学生ID必须大于0") @PathVariable Long studentId) {
+        return ApiResponse.success(reminderNotificationService.getReminderHistory(studentId));
     }
 }
