@@ -1,6 +1,7 @@
 // sub-pages/apply/new.js
 const app = getApp()
-const { get, post } = require('../../api/request')
+const { post } = require('../../api/request')
+const applyApi = require('../../api/apply')
 
 // 防抖定时器
 let submitTimer = null
@@ -18,17 +19,17 @@ Page({
   
   onLoad() {
     if (!app.isLoggedIn()) {
-      wx.redirectTo({ url: '/sub-pages/login/index' })
+      wx.navigateTo({ url: '/sub-pages/login/index' })
       return
     }
     this.loadTypes()
   },
   
-  // 加载申请类型
+  // 加载申请类型 - 使用后端 /knowledge/templates 接口
   async loadTypes() {
     this.setData({ loading: true })
     try {
-      const res = await get('/affairs/types')
+      const res = await applyApi.getApplyTypes()
       this.setData({ types: res.data || [] })
     } catch (e) {
       console.error('加载申请类型失败', e)
@@ -53,10 +54,22 @@ Page({
     this.setData({ remark: e.detail.value })
   },
   
-  // 上传附件
+  // 上传附件（使用 chooseMessageFile 支持 PDF/Word/Excel 等多格式）
   chooseFile() {
+    const remaining = 5 - this.data.attachments.length
+    if (remaining <= 0) {
+      wx.showToast({ title: '最多上传5个附件', icon: 'none' })
+      return
+    }
+
+    wx.showToast({
+      title: '请先将文件发送到微信聊天（如文件传输助手），然后在此选择',
+      icon: 'none',
+      duration: 3000
+    })
+
     wx.chooseMessageFile({
-      count: 5,
+      count: remaining,
       type: 'file',
       success: (res) => {
         const files = res.tempFiles
@@ -68,6 +81,10 @@ Page({
         this.setData({
           attachments: [...this.data.attachments, ...validFiles]
         })
+      },
+      fail: (err) => {
+        console.error('选择文件失败', err)
+        wx.showToast({ title: '选择文件失败', icon: 'none' })
       }
     })
   },
@@ -84,7 +101,7 @@ Page({
   async saveDraft() {
     wx.showLoading({ title: '保存中...' })
     try {
-      await post('/affairs/draft', {
+      await post('/student/certificates/draft', {
         typeId: this.data.selectedType?.id,
         purpose: this.data.purpose,
         remark: this.data.remark,
@@ -123,15 +140,14 @@ Page({
     this.submitApply()
   },
   
-  // 执行提交
+  // 执行提交 - 使用后端 /certificates/requests 接口
   async submitApply() {
     wx.showLoading({ title: '提交中...' })
     try {
-      await post('/affairs', {
-        typeId: this.data.selectedType.id,
+      await applyApi.submitApply({
+        certificateType: this.data.selectedType.title,
         purpose: this.data.purpose,
-        remark: this.data.remark,
-        attachments: this.data.attachments.map(f => ({ name: f.name, path: f.path }))
+        remark: this.data.remark
       })
       wx.showToast({ title: '提交成功', icon: 'success' })
       setTimeout(() => {

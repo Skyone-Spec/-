@@ -163,4 +163,19 @@ public class NoticeService implements NoticeApplicationService {
                 .filter(tag -> !tag.isEmpty())
                 .toList();
     }
+
+    @Override
+    public void markAsRead(Long noticeId, Long studentId) {
+        // Mock implementation - no-op for default profile
+    }
+
+    @Override
+    public void markAllAsRead(Long studentId) {
+        // Mock implementation - no-op for default profile
+    }
+
+    @Override
+    public long countUnread(Long studentId) {
+        return 0;
+    }
 }

@@ -186,6 +186,8 @@ public class MockAdminService implements AdminApplicationService {
                 knowledgeIdGenerator.incrementAndGet(),
                 request.title(),
                 request.category(),
+                request.tags(),
+                1,
                 Boolean.TRUE.equals(request.published()),
                 request.officialUrl(),
                 request.sourceFileName(),
@@ -209,6 +211,8 @@ public class MockAdminService implements AdminApplicationService {
                         id,
                         request.title(),
                         request.category(),
+                        request.tags(),
+                        item.version() + 1,
                         Boolean.TRUE.equals(request.published()),
                         request.officialUrl(),
                         request.sourceFileName(),
@@ -221,6 +225,16 @@ public class MockAdminService implements AdminApplicationService {
             }
         }
         throw new BusinessException("知识条目不存在: " + id);
+    }
+
+    @Override
+    public void deleteKnowledgeItem(Long id) {
+        initializeKnowledgeItems();
+        boolean removed = knowledgeItems.removeIf(item -> item.id().equals(id));
+        if (!removed) {
+            throw new BusinessException("知识条目不存在: " + id);
+        }
+        writeOperationLog("KNOWLEDGE", "DELETE", "知识条目#" + id, "SUCCESS", null);
     }
 
     @Override
@@ -611,6 +625,8 @@ public class MockAdminService implements AdminApplicationService {
                         item.id(),
                         item.title(),
                         item.category(),
+                        null,
+                        1,
                         true,
                         item.officialUrl(),
                         item.title() + ".pdf",
@@ -622,6 +638,8 @@ public class MockAdminService implements AdminApplicationService {
                 299L,
                 "辅导员内部口径说明",
                 "内部资料",
+                "内部",
+                1,
                 false,
                 "https://example.edu/internal",
                 "internal-note.pdf",

@@ -203,6 +203,8 @@ public class AdminService implements AdminApplicationService {
                         item.getId(),
                         item.getTitle(),
                         item.getCategory(),
+                        item.getTags(),
+                        item.getVersion(),
                         Boolean.TRUE.equals(item.getPublished()),
                         item.getOfficialUrl(),
                         item.getSourceFileName(),
@@ -276,9 +278,27 @@ public class AdminService implements AdminApplicationService {
         KnowledgeDocument item = knowledgeDocumentRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("知识条目不存在"));
         populateKnowledgeItem(item, request);
+        item.setVersion(item.getVersion() + 1);
         item = knowledgeDocumentRepository.save(item);
         writeOperationLog("KNOWLEDGE", "UPDATE", item.getTitle(), "SUCCESS", request.sourceFileName());
         return toKnowledgeResponse(item);
+    }
+
+    @Override
+    public void deleteKnowledgeItem(Long id) {
+        if (isKingbaseProfile()) {
+            LatestKnowledgePolicy item = latestKnowledgePolicyRepository.findById(id)
+                    .orElseThrow(() -> new BusinessException("知识条目不存在"));
+            item.setIsDeleted(1);
+            latestKnowledgePolicyRepository.save(item);
+            writeOperationLog("KNOWLEDGE", "DELETE", item.getTitle(), "SUCCESS", null);
+            return;
+        }
+        KnowledgeDocument item = knowledgeDocumentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("知识条目不存在"));
+        item.setDeleted(true);
+        knowledgeDocumentRepository.save(item);
+        writeOperationLog("KNOWLEDGE", "DELETE", item.getTitle(), "SUCCESS", null);
     }
 
     @Override
@@ -831,6 +851,7 @@ public class AdminService implements AdminApplicationService {
         AuthenticatedUser currentUser = currentUserService.requireCurrentUser();
         item.setTitle(request.title());
         item.setCategory(request.category());
+        item.setTags(request.tags());
         item.setContent(request.content());
         item.setOfficialUrl(request.officialUrl());
         item.setSourceFileName(request.sourceFileName());
@@ -844,6 +865,8 @@ public class AdminService implements AdminApplicationService {
                 item.getId(),
                 item.getTitle(),
                 item.getCategory(),
+                item.getTags(),
+                item.getVersion(),
                 Boolean.TRUE.equals(item.getPublished()),
                 item.getOfficialUrl(),
                 item.getSourceFileName(),
@@ -1055,6 +1078,8 @@ public class AdminService implements AdminApplicationService {
                 item.getId(),
                 item.getTitle(),
                 meta.getOrDefault("category", "未分类"),
+                meta.get("tags"),
+                1,
                 item.getIsPublished() != null && item.getIsPublished() == 1,
                 item.getSourceUrl(),
                 sourceFileName,

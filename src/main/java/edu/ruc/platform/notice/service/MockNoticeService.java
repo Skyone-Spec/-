@@ -108,4 +108,19 @@ public class MockNoticeService implements NoticeApplicationService {
         }
         return List.of("IN_APP");
     }
+
+    @Override
+    public void markAsRead(Long noticeId, Long studentId) {
+        // Mock implementation - no-op
+    }
+
+    @Override
+    public void markAllAsRead(Long studentId) {
+        // Mock implementation - no-op
+    }
+
+    @Override
+    public long countUnread(Long studentId) {
+        return 0;
+    }
 }

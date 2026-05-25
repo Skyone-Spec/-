@@ -54,6 +54,8 @@ public interface AdminApplicationService {
 
     AdminKnowledgeItemResponse updateKnowledgeItem(Long id, AdminKnowledgeUpsertRequest request);
 
+    void deleteKnowledgeItem(Long id);
+
     List<KnowledgeAttachmentResponse> listKnowledgeAttachments(Long knowledgeId);
 
     KnowledgeAttachmentResponse uploadKnowledgeAttachment(Long knowledgeId, MultipartFile file);

@@ -3,7 +3,7 @@
   <!-- 顶部插画 -->
   <view class="header-section">
     <image class="header-illustration" src="/static/images/login-illustration.png" mode="aspectFit" />
-    <text class="header-title">请绑定微人大账号</text>
+    <text class="header-title">请登录学院服务平台</text>
     <text class="header-subtitle">一站式办理 轻松办事</text>
   </view>
   
@@ -33,6 +33,18 @@
       />
     </view>
     
+    <view class="form-item">
+      <view class="form-label">密码</view>
+      <input 
+        class="form-input" 
+        type="password" 
+        placeholder="请输入密码（默认123456）"
+        value="{{password}}"
+        bindinput="onPasswordInput"
+        disabled="{{locked}}"
+      />
+    </view>
+    
     <button 
       class="login-btn {{locked ? 'locked' : ''}}"
       bindtap="handleLogin"
@@ -44,7 +56,7 @@
     </button>
     
     <view class="login-tips">
-      <text>仅绑定微人大账号，不存储密码</text>
+      <text>默认密码：123456</text>
     </view>
     
     <view class="error-tips" wx:if="{{errorCount > 0 && errorCount < 5}}">

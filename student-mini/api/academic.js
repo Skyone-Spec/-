@@ -1,16 +1,24 @@
 // api/academic.js
+const app = getApp()
 const { get } = require('./request')
 
 /**
  * 获取学业分析概览
+ * 后端接口: GET /api/v1/academic/analysis/{studentId}
  */
-exports.getAcademicOverview = () => get('/academic/overview')
+exports.getAcademicOverview = () => {
+  const studentId = app.globalData.userInfo?.studentId || app.globalData.userInfo?.id || 1
+  return get(`/academic/analysis/${studentId}`)
+}
 
 /**
  * 获取成绩列表
- * @param {Object} params - { page, pageSize, semester }
+ * 注：后端暂无独立成绩列表接口，学业分析集中在 /academic/analysis/{studentId}
  */
-exports.getGrades = (params) => get('/academic/grades', params)
+exports.getGrades = (params) => {
+  const studentId = app.globalData.userInfo?.studentId || app.globalData.userInfo?.id || 1
+  return get(`/academic/analysis/${studentId}`, params)
+}
 
 /**
  * 获取成绩详情
@@ -21,14 +29,23 @@ exports.getGradeDetail = (id) => get(`/academic/grades/${id}`)
 /**
  * 获取学业预警
  */
-exports.getWarnings = () => get('/academic/warnings')
+exports.getWarnings = () => {
+  const studentId = app.globalData.userInfo?.studentId || app.globalData.userInfo?.id || 1
+  return get(`/academic/analysis/${studentId}`)
+}
 
 /**
  * 获取学分统计
  */
-exports.getCredits = () => get('/academic/credits')
+exports.getCredits = () => {
+  const studentId = app.globalData.userInfo?.studentId || app.globalData.userInfo?.id || 1
+  return get(`/academic/analysis/${studentId}`)
+}
 
 /**
  * 获取 GPA 趋势
  */
-exports.getGpaTrend = () => get('/academic/gpa-trend')
+exports.getGpaTrend = () => {
+  const studentId = app.globalData.userInfo?.studentId || app.globalData.userInfo?.id || 1
+  return get(`/academic/analysis/${studentId}`)
+}

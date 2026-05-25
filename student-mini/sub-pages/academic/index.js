@@ -1,6 +1,6 @@
 // sub-pages/academic/index.js
 const app = getApp()
-const { get, post } = require('../../api/request')
+const { get } = require('../../api/request')
 
 Page({
   data: {
@@ -26,7 +26,9 @@ Page({
   async loadReport() {
     this.setData({ loading: true })
     try {
-      const res = await get('/academic/report')
+      // 获取学生ID
+      const studentId = app.globalData.userInfo?.studentId || app.globalData.userInfo?.id || 1
+      const res = await get(`/academic/analysis/${studentId}`)
       this.setData({ report: res.data })
     } catch (e) {
       console.error('加载学业报告失败', e)

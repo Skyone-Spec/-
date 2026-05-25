@@ -197,7 +197,7 @@ public class KingbaseStudentProfileService implements StudentProfileApplicationS
         return studentPortraitRepository.findByStudentId(studentId)
                 .map(item -> enforcePortraitAccess(user, profile, item))
                 .map(this::toPortraitResponse)
-                .orElse(new StudentPortraitResponse(studentId, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, false));
+                .orElse(new StudentPortraitResponse(studentId, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, false));
     }
 
     @Override
@@ -214,6 +214,7 @@ public class KingbaseStudentProfileService implements StudentProfileApplicationS
         portrait.setVolunteerService(request.volunteerService());
         portrait.setResearchExperience(request.researchExperience());
         portrait.setDisciplineRecords(request.disciplineRecords());
+        portrait.setLeadershipRoles(request.leadershipRoles());
         portrait.setDailyPerformance(request.dailyPerformance());
         portrait.setGpa(request.gpa());
         portrait.setGradeRank(request.gradeRank());
@@ -546,6 +547,7 @@ public class KingbaseStudentProfileService implements StudentProfileApplicationS
                 item.getVolunteerService(),
                 item.getResearchExperience(),
                 item.getDisciplineRecords(),
+                item.getLeadershipRoles(),
                 item.getDailyPerformance(),
                 item.getGpa(),
                 item.getGradeRank(),

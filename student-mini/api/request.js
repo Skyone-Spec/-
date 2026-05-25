@@ -1,37 +1,31 @@
 // API 请求封装
 // 注意：不在模块顶部调用 getApp()，避免真机上的问题
 
-// 从 globalData 动态读取 Mock 配置，默认为 true
-let USE_MOCK = true
-try {
-  USE_MOCK = getApp().globalData.USE_MOCK !== false
-} catch (e) {
-  USE_MOCK = true
-}
-
-// 延迟加载 mock 模块
-let mockModule = null
-try {
-  mockModule = require('./mock.js')
-  console.log('[Request] Mock模块加载成功')
-} catch (e) {
-  console.error('[Request] 加载mock模块失败:', e)
-}
+// 从 globalData 动态读取 Mock 配置，默认为 false（生产环境）
+let USE_MOCK = false
 
 const request = (options) => {
   return new Promise((resolve, reject) => {
     const { url, method = 'GET', data, header = {} } = options
     
-    // Mock 模式（同步处理）
+    // 每次请求时动态获取 Mock 配置
+    try {
+      const app = getApp()
+      if (app && app.globalData) {
+        USE_MOCK = app.globalData.USE_MOCK === true
+      }
+    } catch (e) {
+      USE_MOCK = false
+    }
+    
+    // Mock 模式
     if (USE_MOCK) {
       try {
-        if (!mockModule) {
-          // 尝试重新加载 mock 模块
-          try {
-            mockModule = require('./mock.js')
-          } catch (loadErr) {
-            console.error('[Request] 重新加载mock失败:', loadErr)
-          }
+        let mockModule = null
+        try {
+          mockModule = require('./mock.js')
+        } catch (e) {
+          console.error('[Request] 加载mock模块失败:', e)
         }
         
         if (mockModule && mockModule.getMockData) {
@@ -72,6 +66,7 @@ const request = (options) => {
       timeout: 30000,
       header: {
         'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
         'Authorization': app.globalData.token ? `Bearer ${app.globalData.token}` : '',
         ...header
       },

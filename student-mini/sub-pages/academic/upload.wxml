@@ -40,7 +40,8 @@
   <view class="tips-card">
     <view class="tips-title">注意事项</view>
     <view class="tips-item">• 请上传学校官方出具的成绩单</view>
-    <view class="tips-item">• 支持 PDF、图片等常见格式</view>
+    <view class="tips-item">• 支持 PDF、Word、Excel、图片等格式</view>
+    <view class="tips-item">• 请先将文件发送到微信聊天（如文件传输助手），再点击上传选择</view>
     <view class="tips-item">• 上传后系统将自动解析并生成学业分析报告</view>
     <view class="tips-item">• 如解析失败，请联系管理员处理</view>
   </view>

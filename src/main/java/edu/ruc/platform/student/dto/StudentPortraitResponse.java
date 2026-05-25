@@ -11,6 +11,7 @@ public record StudentPortraitResponse(
         String volunteerService,
         String researchExperience,
         String disciplineRecords,
+        String leadershipRoles,
         String dailyPerformance,
         Double gpa,
         Integer gradeRank,

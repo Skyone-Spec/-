@@ -8,11 +8,11 @@
       <picker 
         mode="selector" 
         range="{{types}}" 
-        range-key="name"
+        range-key="title"
         bindchange="onTypeChange"
       >
         <view class="picker-value {{selectedType ? '' : 'placeholder'}}">
-          {{selectedType ? selectedType.name : '请选择申请类型'}}
+          {{selectedType ? selectedType.title : '请选择申请类型'}}
         </view>
       </picker>
     </view>
@@ -64,7 +64,8 @@
   <view class="tips-card">
     <view class="tips-title">温馨提示</view>
     <view class="tips-item">• 请确保填写信息真实有效</view>
-    <view class="tips-item">• 附件支持 PDF、PNG、JPG、XLSX 格式</view>
+    <view class="tips-item">• 附件支持 PDF、Word、Excel、PNG、JPG 格式</view>
+    <view class="tips-item">• 请先将文件发送到微信聊天（如文件传输助手），再点击添加选择</view>
     <view class="tips-item">• 单个文件大小不超过 20MB</view>
   </view>
   

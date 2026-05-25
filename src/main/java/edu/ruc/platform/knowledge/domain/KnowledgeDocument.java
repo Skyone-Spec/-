@@ -20,6 +20,9 @@ public class KnowledgeDocument extends BaseEntity {
     @Column(nullable = false, length = 100)
     private String category;
 
+    @Column(length = 500)
+    private String tags;
+
     @Lob
     @Column(nullable = false)
     private String content;
@@ -38,4 +41,10 @@ public class KnowledgeDocument extends BaseEntity {
 
     @Column(length = 64)
     private String updatedBy;
+
+    @Column(nullable = false)
+    private Integer version = 1;
+
+    @Column(nullable = false)
+    private Boolean deleted = Boolean.FALSE;
 }

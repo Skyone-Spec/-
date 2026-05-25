@@ -29,4 +29,10 @@ public class LatestNoticeDeliveryTarget extends BaseEntity {
 
     @Column
     private String errorMessage;
+
+    @Column(nullable = false)
+    private Boolean isRead = Boolean.FALSE;
+
+    @Column
+    private LocalDateTime readAt;
 }

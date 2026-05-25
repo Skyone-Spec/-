@@ -25,7 +25,8 @@ Page({
     this.setData({ loading: true })
     
     try {
-      const res = await get(`/party/progress/${this.data.type}`)
+      // 使用后端 /student/party-progress 接口
+      const res = await get('/student/party-progress')
       this.setData({ detail: res.data })
     } catch (e) {
       console.error('加载进度失败', e)

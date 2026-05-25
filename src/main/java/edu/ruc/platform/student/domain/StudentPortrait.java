@@ -43,6 +43,9 @@ public class StudentPortrait extends BaseEntity {
     @Column(length = 255)
     private String disciplineRecords;
 
+    @Column(length = 500)
+    private String leadershipRoles;
+
     @Column(length = 255)
     private String dailyPerformance;
 
