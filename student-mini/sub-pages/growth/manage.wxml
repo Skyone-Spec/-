@@ -1,0 +1,78 @@
+<view class="page">
+  <view class="hero-card">
+    <view class="hero-top">
+      <view class="hero-text">
+        <text class="hero-title">{{activeModule ? activeModule.moduleName : '成长信息管理'}}</text>
+        <text class="hero-desc">{{activeModule ? activeModule.description : '按模块查看与维护个人成长信息'}}</text>
+      </view>
+      <view class="hero-icon">{{activeModule ? activeModule.iconText : '档'}}</view>
+    </view>
+    <view class="hero-tags" wx:if="{{activeModule}}">
+      <text class="mode-tag mode-{{activeModule.editable ? 'self' : 'disabled'}}">{{activeModule.editModeLabel}}</text>
+    </view>
+  </view>
+
+  <scroll-view class="module-scroll" scroll-x="true" enable-flex="true">
+    <view class="module-row">
+      <view
+        wx:for="{{modules}}"
+        wx:key="moduleCode"
+        class="module-chip {{activeModuleCode === item.moduleCode ? 'active' : ''}}"
+        data-module-code="{{item.moduleCode}}"
+        bindtap="onModuleTap"
+      >
+        <text class="module-chip-name">{{item.moduleName}}</text>
+        <text class="module-chip-mode">{{item.editModeLabel}}</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <scroll-view
+    wx:if="{{activeModuleCode === 'award-support' && awardTypeOptions.length > 1}}"
+    class="filter-scroll"
+    scroll-x="true"
+    enable-flex="true"
+  >
+    <view class="filter-row">
+      <view
+        wx:for="{{awardTypeOptions}}"
+        wx:key="*this"
+        class="filter-chip {{awardTypeFilter === item ? 'active' : ''}}"
+        data-award-type="{{item}}"
+        bindtap="onAwardTypeTap"
+      >
+        <text>{{item}}</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <view class="toolbar" wx:if="{{activeModule}}">
+    <view class="permission-card">
+      <text class="permission-title">{{activeModule.editable ? '自主修改' : '禁止修改'}}</text>
+      <text class="permission-desc">{{activeModule.editable ? '当前模块支持新增、编辑和删除，保存后立即生效。' : '当前模块仅支持查看，如需修改请联系相关部门咨询。'}}</text>
+    </view>
+    <button wx:if="{{activeModule.editable}}" class="add-btn" bindtap="goToAdd">新增记录</button>
+  </view>
+
+  <view class="card-list" wx:if="{{records.length}}">
+    <view wx:for="{{records}}" wx:key="id" class="record-card">
+      <view class="card-head">
+        <text class="record-title">{{item.summary}}</text>
+        <text class="record-time">{{item.updatedAt}}</text>
+      </view>
+      <view wx:for="{{item.fields}}" wx:key="key" class="field-row">
+        <text class="field-label">{{item.label}}</text>
+        <text class="field-value">{{item.value}}</text>
+      </view>
+      <view class="card-actions" wx:if="{{activeModule && activeModule.editable}}">
+        <button size="mini" plain="true" data-id="{{item.id}}" bindtap="goToEdit">编辑</button>
+        <button size="mini" type="warn" plain="true" data-id="{{item.id}}" bindtap="deleteRecord">删除</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && records.length === 0}}" class="empty-state">
+    <text class="empty-title">{{emptyTitle}}</text>
+    <text class="empty-desc">{{activeModule && activeModule.editable ? '可点击上方按钮新增成长经历' : '当前模块仅支持查看，暂无可展示内容'}}</text>
+  </view>
+</view>

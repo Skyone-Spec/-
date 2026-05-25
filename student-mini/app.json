@@ -86,6 +86,14 @@
       ]
     },
     {
+      "root": "sub-pages/growth",
+      "pages": [
+        "manage",
+        "archive",
+        "edit"
+      ]
+    },
+    {
       "root": "sub-pages/agreement",
       "pages": [
         "index"

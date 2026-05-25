@@ -23,6 +23,8 @@ public interface StudentProfileApplicationService {
 
     StudentProfileResponse getStudent(Long id);
 
+    StudentProfileResponse getStudentByStudentNo(String studentNo);
+
     StudentProfileResponse currentStudentProfile();
 
     List<StudentProfileResponse> listStudentsByGrade(String grade);

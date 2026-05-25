@@ -96,6 +96,10 @@ Page({
   goToHonor() {
     wx.navigateTo({ url: '/sub-pages/honor/index' })
   },
+
+  goToArchive() {
+    wx.navigateTo({ url: '/sub-pages/growth/archive' })
+  },
   
   // 跳转新闻详情
   goToNewsDetail(e) {

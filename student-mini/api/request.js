@@ -29,7 +29,7 @@ const request = (options) => {
         }
         
         if (mockModule && mockModule.getMockData) {
-          const mockResult = mockModule.getMockData(url, data)
+          const mockResult = mockModule.getMockData(url, data, method)
           console.log('[Request] Mock返回:', url, mockResult)
           resolve(mockResult)
           return

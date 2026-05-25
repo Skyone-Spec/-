@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 public record StudentProfileUpsertRequest(
         @NotBlank(message = "学号不能为空") String studentNo,
         @NotBlank(message = "姓名不能为空") String name,
+        String collegeName,
         String major,
         String grade,
         String className,

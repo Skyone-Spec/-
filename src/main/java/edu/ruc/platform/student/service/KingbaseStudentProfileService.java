@@ -83,6 +83,15 @@ public class KingbaseStudentProfileService implements StudentProfileApplicationS
     }
 
     @Override
+    public StudentProfileResponse getStudentByStudentNo(String studentNo) {
+        LatestUser user = latestUserRepository.findByStudentNoAndIsDeleted(studentNo, 0)
+                .orElseThrow(() -> new BusinessException("学生不存在: " + studentNo));
+        return buildProfile(user.getId())
+                .map(item -> toResponse(item, currentUserService.requireCurrentUser()))
+                .orElseThrow(() -> new BusinessException("学生不存在: " + studentNo));
+    }
+
+    @Override
     public StudentProfileResponse currentStudentProfile() {
         AuthenticatedUser user = currentUserService.requireCurrentUser();
         if (user.studentId() == null) {
@@ -299,6 +308,7 @@ public class KingbaseStudentProfileService implements StudentProfileApplicationS
                             user.getId(),
                             user.getStudentNo(),
                             user.getFullName(),
+                            parseCollegeName(ext),
                             ext == null ? null : ext.getMajorName(),
                             ext == null || ext.getGradeYear() == null ? null : ext.getGradeYear() + "级",
                             ext == null ? null : ext.getClassName(),
@@ -365,8 +375,9 @@ public class KingbaseStudentProfileService implements StudentProfileApplicationS
 
     private String buildExtJson(StudentProfileUpsertRequest request) {
         String advisor = request.advisorScope() == null ? "" : request.advisorScope().replace("\"", "");
+        String collegeName = request.collegeName() == null ? "" : request.collegeName().replace("\"", "");
         String degreeLevel = request.degreeLevel() == null ? "" : request.degreeLevel().replace("\"", "");
-        return "{\"advisor\":\"" + advisor + "\",\"degreeLevel\":\"" + degreeLevel + "\"}";
+        return "{\"advisor\":\"" + advisor + "\",\"collegeName\":\"" + collegeName + "\",\"degreeLevel\":\"" + degreeLevel + "\"}";
     }
 
     private String parseAdvisorScope(LatestStudentExt ext) {
@@ -383,6 +394,14 @@ public class KingbaseStudentProfileService implements StudentProfileApplicationS
         }
         java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\"degreeLevel\"\\s*:\\s*\"([^\"]*)\"").matcher(ext.getExtJson());
         return matcher.find() && !matcher.group(1).isBlank() ? matcher.group(1) : "本科";
+    }
+
+    private String parseCollegeName(LatestStudentExt ext) {
+        if (ext == null || ext.getExtJson() == null) {
+            return null;
+        }
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\"collegeName\"\\s*:\\s*\"([^\"]*)\"").matcher(ext.getExtJson());
+        return matcher.find() && !matcher.group(1).isBlank() ? matcher.group(1) : null;
     }
 
     private String toLatestStatus(String studentStatus) {
@@ -414,6 +433,7 @@ public class KingbaseStudentProfileService implements StudentProfileApplicationS
                 response.id(),
                 response.studentNo(),
                 response.name(),
+                response.collegeName(),
                 response.major(),
                 response.grade(),
                 response.className(),

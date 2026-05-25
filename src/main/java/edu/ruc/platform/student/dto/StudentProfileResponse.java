@@ -4,6 +4,7 @@ public record StudentProfileResponse(
         Long id,
         String studentNo,
         String name,
+        String collegeName,
         String major,
         String grade,
         String className,

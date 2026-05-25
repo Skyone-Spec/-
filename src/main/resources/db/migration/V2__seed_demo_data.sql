@@ -4,9 +4,9 @@ VALUES
     ('2023100001', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'STUDENT', TRUE, 'mock-open-id-10001')
 ON CONFLICT (username) DO NOTHING;
 
-INSERT INTO student_profile (id, student_no, name, major, grade, class_name, degree_level, encrypted_id_card_no, encrypted_phone, email, graduated)
+INSERT INTO student_profile (id, student_no, name, college_name, major, grade, class_name, degree_level, encrypted_id_card_no, encrypted_phone, email, graduated)
 VALUES
-    (10001, '2023100001', '张三', '计算机类', '2023级', '计科一班', '本科', NULL, NULL, 'zhangsan@example.edu', FALSE)
+    (10001, '2023100001', '张三', '信息学院', '计算机类', '2023级', '计科一班', '本科', NULL, NULL, 'zhangsan@example.edu', FALSE)
 ON CONFLICT (student_no) DO NOTHING;
 
 INSERT INTO knowledge_document (title, category, content, official_url, published)

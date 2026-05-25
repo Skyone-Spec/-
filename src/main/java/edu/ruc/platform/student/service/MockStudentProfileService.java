@@ -42,8 +42,8 @@ public class MockStudentProfileService implements StudentProfileApplicationServi
             new AdvisorScopeRecord("advisor02", "赵老师", "2023级", "计科二班", 10002L)
     ));
     private final List<StudentProfileResponse> students = new ArrayList<>(List.of(
-            new StudentProfileResponse(10001L, "2023100001", "张三", "计算机类", "2023级", "计科一班", "advisor01|王老师", "本科", "zhangsan@example.edu", false, "ACTIVE", null, "****************12", "********5678", "北京*", "北京*", "导师*"),
-            new StudentProfileResponse(10002L, "2023100002", "李四", "计算机类", "2023级", "计科二班", "advisor02|赵老师", "本科", "lisi@example.edu", false, "ACTIVE", null, "****************34", "********1234", "河北*", "河北*", "导师*")
+            new StudentProfileResponse(10001L, "2023100001", "张三", "信息学院", "计算机类", "2023级", "计科一班", "advisor01|王老师", "本科", "zhangsan@example.edu", false, "ACTIVE", null, "****************12", "********5678", "北京*", "北京*", "导师*"),
+            new StudentProfileResponse(10002L, "2023100002", "李四", "信息学院", "计算机类", "2023级", "计科二班", "advisor02|赵老师", "本科", "lisi@example.edu", false, "ACTIVE", null, "****************34", "********1234", "河北*", "河北*", "导师*")
     ));
     private final List<StudentPortraitResponse> portraits = new ArrayList<>(List.of(
             new StudentPortraitResponse(10001L, "男", "汉族", "国奖,校优", "国家奖学金", "数学建模", "支教实践", "20小时", "导师课题参与", null, "班长、团支书", "表现良好", 3.82, 12, 5, 98, "升学", "可作为榜样展示", "胡浩老师", "老师维护", true)
@@ -83,6 +83,16 @@ public class MockStudentProfileService implements StudentProfileApplicationServi
                 .findFirst()
                 .map(item -> maskForRole(item, user))
                 .orElseThrow(() -> new BusinessException("学生不存在或无权访问"));
+    }
+
+    @Override
+    public StudentProfileResponse getStudentByStudentNo(String studentNo) {
+        AuthenticatedUser user = currentUserService.requireCurrentUser();
+        return students.stream()
+                .filter(item -> item.studentNo().equals(studentNo))
+                .findFirst()
+                .map(item -> maskForRole(item, user))
+                .orElseThrow(() -> new BusinessException("学生不存在: " + studentNo));
     }
 
     @Override
@@ -185,6 +195,7 @@ public class MockStudentProfileService implements StudentProfileApplicationServi
                 current.id(),
                 current.studentNo(),
                 current.name(),
+                current.collegeName(),
                 current.major(),
                 current.grade(),
                 current.className(),
@@ -317,6 +328,7 @@ public class MockStudentProfileService implements StudentProfileApplicationServi
                 id,
                 request.studentNo(),
                 request.name(),
+                request.collegeName(),
                 request.major(),
                 request.grade(),
                 request.className(),
@@ -427,6 +439,7 @@ public class MockStudentProfileService implements StudentProfileApplicationServi
                     item.id(),
                     item.studentNo(),
                     item.name(),
+                    item.collegeName(),
                     item.major(),
                     item.grade(),
                     item.className(),
@@ -448,6 +461,7 @@ public class MockStudentProfileService implements StudentProfileApplicationServi
                     item.id(),
                     item.studentNo(),
                     item.name(),
+                    item.collegeName(),
                     item.major(),
                     item.grade(),
                     item.className(),
@@ -471,6 +485,7 @@ public class MockStudentProfileService implements StudentProfileApplicationServi
                 item.id(),
                 item.studentNo(),
                 item.name(),
+                item.collegeName(),
                 item.major(),
                 item.grade(),
                 item.className(),

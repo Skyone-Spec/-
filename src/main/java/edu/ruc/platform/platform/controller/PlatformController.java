@@ -24,6 +24,7 @@ import edu.ruc.platform.platform.dto.PlatformSecurityPolicyResponse;
 import edu.ruc.platform.platform.dto.PlatformSecurityPolicyUpdateRequest;
 import edu.ruc.platform.platform.dto.PlatformSessionResponse;
 import edu.ruc.platform.platform.dto.PlatformStudentDataScopeResponse;
+import edu.ruc.platform.platform.dto.PlatformStudentDetailResponse;
 import edu.ruc.platform.platform.dto.PlatformStudentScopeCheckResponse;
 import edu.ruc.platform.platform.dto.PlatformStudentQueryResponse;
 import edu.ruc.platform.platform.dto.PlatformStudentUiContractResponse;
@@ -272,7 +273,7 @@ public class PlatformController {
             RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR,
             RoleType.CLASS_ADVISOR, RoleType.LEAGUE_SECRETARY, RoleType.STUDENT
     })
-    public ApiResponse<PlatformStudentQueryResponse> getStudent(@Positive(message = "学生ID必须大于 0") @PathVariable Long studentId) {
+    public ApiResponse<PlatformStudentDetailResponse> getStudent(@Positive(message = "学生ID必须大于 0") @PathVariable Long studentId) {
         return ApiResponse.success(platformService.getStudent(studentId));
     }
 
@@ -480,6 +481,12 @@ public class PlatformController {
     @RequireRoles({RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN, RoleType.COUNSELOR})
     public ApiResponse<BatchImportResultResponse> importStudents(@RequestParam("file") MultipartFile file) {
         return ApiResponse.success("学生导入完成", excelImportExportService.importStudents(file));
+    }
+
+    @PostMapping("/students/award-support/import")
+    @RequireRoles({RoleType.SUPER_ADMIN, RoleType.COLLEGE_ADMIN})
+    public ApiResponse<BatchImportResultResponse> importAwardSupportRecords(@RequestParam("file") MultipartFile file) {
+        return ApiResponse.success("奖助情况导入完成", excelImportExportService.importAwardSupportRecords(file));
     }
 
     @GetMapping("/students/export")

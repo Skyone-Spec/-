@@ -1,6 +1,5 @@
 <!-- pages/index/index.wxml -->
 <view class="container">
-  <!-- 顶部欢迎 -->
   <view class="welcome-bar">
     <view class="welcome-info">
       <text class="welcome-text">您好，{{userInfo.name || '同学'}}</text>
@@ -11,14 +10,13 @@
       <text class="message-badge" wx:if="{{unreadCount > 0}}">{{unreadCount}}</text>
     </view>
   </view>
-  
-  <!-- 轮播图 -->
+
   <swiper class="banner" indicator-dots autoplay circular>
     <swiper-item wx:for="{{banners}}" wx:key="id">
       <image src="{{item.image}}" mode="aspectFill" />
     </swiper-item>
   </swiper>
-  
+
   <!-- 功能入口 -->
   <view class="entry-grid">
     <view class="entry-item" bindtap="goToPolicy">
@@ -43,9 +41,14 @@
         <text class="entry-name">奖助信息</text>
       </view>
     </view>
+    <view class="entry-item" bindtap="goToArchive">
+      <view class="entry-icon-badge">案</view>
+      <view class="entry-text">
+        <text class="entry-name">个人档案</text>
+      </view>
+    </view>
   </view>
-  
-  <!-- 最新动态 -->
+
   <view class="news-section">
     <view class="section-header">
       <text class="section-title">最新动态</text>

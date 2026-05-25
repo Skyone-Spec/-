@@ -8,7 +8,8 @@ App({
     // 然后在下方替换为实际可访问的地址，并在小程序后台配置 request 合法域名。
     // TODO: 替换为实际后端 HTTPS 地址，例如: 'https://abc123.ngrok-free.app/api/v1'
     baseUrl: 'https://camping-penny-concert.ngrok-free.dev/api/v1',
-    USE_MOCK: false,
+    // 本地演示默认走 mock，未启动后端/数据库时也可登录体验。
+    USE_MOCK: true,
   },
   
   onLaunch() {

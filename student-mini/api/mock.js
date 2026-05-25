@@ -415,6 +415,258 @@ const honorRecipients = [
   }
 ]
 
+const growthModules = [
+  { moduleCode: 'award-support', moduleName: '奖助情况', editMode: 'DISABLED', editModeLabel: '禁止修改' },
+  { moduleCode: 'competition', moduleName: '学科竞赛', editMode: 'SELF', editModeLabel: '自主修改' },
+  { moduleCode: 'innovation-entrepreneurship', moduleName: '创新创业', editMode: 'SELF', editModeLabel: '自主修改' },
+  { moduleCode: 'social-practice', moduleName: '社会实践', editMode: 'SELF', editModeLabel: '自主修改' },
+  { moduleCode: 'student-work', moduleName: '学生工作', editMode: 'SELF', editModeLabel: '自主修改' },
+  { moduleCode: 'volunteer-service', moduleName: '志愿服务', editMode: 'SELF', editModeLabel: '自主修改' },
+  { moduleCode: 'skill-certificate', moduleName: '技能证书', editMode: 'SELF', editModeLabel: '自主修改' }
+]
+
+let growthRecordSeed = 2000
+const growthRecords = [
+  {
+    id: 2001,
+    moduleCode: 'award-support',
+    summary: '2024-2025 / 国家奖学金',
+    updatedAt: '2026-05-01 10:00',
+    rawFields: {
+      assessmentAcademicYear: '2024-2025',
+      awardName: '国家奖学金',
+      batchName: '第一批',
+      awardLevel: '国家级',
+      awardGrade: '一等奖',
+      awardAmount: '8000',
+      awardType: '奖学金'
+    }
+  },
+  {
+    id: 2002,
+    moduleCode: 'competition',
+    summary: '全国大学生数学建模竞赛 / 二等奖',
+    updatedAt: '2026-05-02 09:30',
+    rawFields: {
+      awardDate: '2025-11-18',
+      competitionName: '全国大学生数学建模竞赛',
+      competitionLevel: '国家级',
+      competitionGrade: '二等奖',
+      competitionCategory: '学科竞赛',
+      organizer: '教育部高教司',
+      advisorTeacherInfo: '李老师',
+      remarks: '团队核心成员'
+    }
+  },
+  {
+    id: 2003,
+    moduleCode: 'innovation-entrepreneurship',
+    summary: '校园服务智能问答平台 / 已结项',
+    updatedAt: '2026-05-03 14:20',
+    rawFields: {
+      startDate: '2025-03-01',
+      endDate: '2025-12-20',
+      projectCode: 'CX2025-01',
+      projectName: '校园服务智能问答平台',
+      collegeName: '信息学院',
+      projectStatus: '已结项',
+      projectLevel: '校级',
+      completionGrade: '优秀',
+      participantRole: '负责人',
+      projectType: '创新训练',
+      projectBatch: '2025年度',
+      participantCount: '5',
+      advisorTeacher: '胡老师'
+    }
+  }
+]
+
+const growthFieldLabels = {
+  'award-support': {
+    assessmentAcademicYear: '评定学年',
+    awardName: '奖学金名称',
+    batchName: '批次名称',
+    awardLevel: '奖励级别',
+    awardGrade: '奖励等级',
+    awardAmount: '奖学金额（元）',
+    awardType: '奖励类型'
+  },
+  competition: {
+    awardDate: '获奖日期',
+    competitionName: '获奖竞赛名称',
+    competitionLevel: '获奖级别',
+    competitionGrade: '获奖等级',
+    competitionCategory: '获奖类别',
+    organizer: '竞赛主办单位',
+    advisorTeacherInfo: '指导教师信息',
+    remarks: '其他说明'
+  },
+  'innovation-entrepreneurship': {
+    startDate: '开始日期',
+    endDate: '结束日期',
+    projectCode: '项目编号',
+    projectName: '项目名称',
+    collegeName: '项目依托学院',
+    projectStatus: '项目状态',
+    projectLevel: '项目级别',
+    completionGrade: '结项等级',
+    participantRole: '参与角色',
+    projectType: '项目类型',
+    projectBatch: '项目批次',
+    participantCount: '参与学生总人数',
+    advisorTeacher: '指导教师'
+  },
+  'social-practice': {
+    practiceStartDate: '实践开始日期',
+    practiceEndDate: '实践结束日期',
+    practiceTeamName: '实践团名称',
+    practiceTheme: '实践主题',
+    practiceLocation: '实践地点',
+    practiceTeamLevel: '实践团等级',
+    advisorTeacher: '指导老师'
+  },
+  'student-work': {
+    startDate: '开始日期',
+    endDate: '结束日期',
+    organizationName: '组织名称',
+    positionName: '担任职务',
+    workDescription: '工作情况'
+  },
+  'volunteer-service': {
+    serviceDate: '志愿服务日期',
+    serviceProject: '志愿服务项目',
+    serviceLocation: '志愿服务地点',
+    serviceDurationHours: '志愿服务时长',
+    serviceOrganizationName: '志愿服务组织名称'
+  },
+  'skill-certificate': {
+    certificateName: '技能/证书名称',
+    obtainedDate: '获得时间',
+    certificateLevel: '级别',
+    description: '说明'
+  }
+}
+
+const toGrowthRecordResponse = (record) => {
+  const labels = growthFieldLabels[record.moduleCode] || {}
+  return {
+    ...record,
+    fields: Object.keys(record.rawFields || {})
+      .filter((key) => record.rawFields[key])
+      .map((key) => ({
+        key,
+        label: labels[key] || key,
+        value: record.rawFields[key]
+      }))
+  }
+}
+
+const buildGrowthSummary = (moduleCode, fields = {}) => {
+  switch (moduleCode) {
+    case 'award-support':
+      return `${fields.assessmentAcademicYear || ''} / ${fields.awardName || ''}`.replace(/^ \/ | \/ $/g, '')
+    case 'competition':
+      return `${fields.competitionName || ''} / ${fields.competitionGrade || ''}`.replace(/^ \/ | \/ $/g, '')
+    case 'innovation-entrepreneurship':
+      return `${fields.projectName || ''} / ${fields.projectStatus || ''}`.replace(/^ \/ | \/ $/g, '')
+    case 'social-practice':
+      return `${fields.practiceTeamName || ''} / ${fields.practiceTheme || ''}`.replace(/^ \/ | \/ $/g, '')
+    case 'student-work':
+      return `${fields.organizationName || ''} / ${fields.positionName || ''}`.replace(/^ \/ | \/ $/g, '')
+    case 'volunteer-service':
+      return `${fields.serviceProject || ''} / ${fields.serviceDurationHours ? fields.serviceDurationHours + '小时' : ''}`.replace(/^ \/ | \/ $/g, '')
+    case 'skill-certificate':
+      return `${fields.certificateName || ''} / ${fields.certificateLevel || ''}`.replace(/^ \/ | \/ $/g, '')
+    default:
+      return '未命名记录'
+  }
+}
+
+const getGrowthMockData = (url, params = {}, method = 'GET') => {
+  if (url === '/student/growth/modules') {
+    return { data: growthModules, success: true }
+  }
+
+  if (url === '/student/growth/archive') {
+    return {
+      data: {
+        profile: {
+          id: 10001,
+          studentNo: '2023100001',
+          name: '张三',
+          major: '计算机类',
+          grade: '2023级',
+          className: '计科一班',
+          degreeLevel: '本科',
+          status: 'ACTIVE',
+          email: 'zhangsan@example.edu'
+        },
+        modules: growthModules.map((module) => ({
+          ...module,
+          records: growthRecords
+            .filter((item) => item.moduleCode === module.moduleCode)
+            .map(toGrowthRecordResponse)
+        }))
+      },
+      success: true
+    }
+  }
+
+  const listMatch = url.match(/^\/student\/growth\/([^/]+)\/records$/)
+  if (listMatch) {
+    const moduleCode = listMatch[1]
+    if (method === 'GET') {
+      return {
+        data: growthRecords
+          .filter((item) => item.moduleCode === moduleCode)
+          .map(toGrowthRecordResponse),
+        success: true
+      }
+    }
+    if (method === 'POST') {
+      const fields = (params && params.fields) || {}
+      const created = {
+        id: ++growthRecordSeed,
+        moduleCode,
+        summary: buildGrowthSummary(moduleCode, fields),
+        updatedAt: '2026-05-25 10:00',
+        rawFields: { ...fields }
+      }
+      growthRecords.unshift(created)
+      return { data: toGrowthRecordResponse(created), success: true }
+    }
+  }
+
+  const detailMatch = url.match(/^\/student\/growth\/([^/]+)\/records\/(\d+)$/)
+  if (detailMatch) {
+    const moduleCode = detailMatch[1]
+    const id = Number(detailMatch[2])
+    const target = growthRecords.find((item) => item.moduleCode === moduleCode && item.id === id)
+    if (!target) {
+      return { data: null, success: false, message: '记录不存在' }
+    }
+    if (method === 'GET') {
+      return { data: toGrowthRecordResponse(target), success: true }
+    }
+    if (method === 'PUT') {
+      const fields = (params && params.fields) || {}
+      target.rawFields = { ...fields }
+      target.summary = buildGrowthSummary(moduleCode, fields)
+      target.updatedAt = '2026-05-25 10:00'
+      return { data: toGrowthRecordResponse(target), success: true }
+    }
+    if (method === 'DELETE') {
+      const index = growthRecords.findIndex((item) => item.moduleCode === moduleCode && item.id === id)
+      if (index >= 0) {
+        growthRecords.splice(index, 1)
+      }
+      return { data: null, success: true }
+    }
+  }
+
+  return null
+}
+
 const getHonorMockData = (url, params = {}) => {
   if (url === '/student/honors/page') {
     const page = Number(params.page || 0)
@@ -467,7 +719,12 @@ const getHonorMockData = (url, params = {}) => {
   return null
 }
 
-exports.getMockData = (url, params = {}) => {
+exports.getMockData = (url, params = {}, method = 'GET') => {
+  const growthMock = getGrowthMockData(url, params, method)
+  if (growthMock) {
+    return growthMock
+  }
+
   const honorMock = getHonorMockData(url, params)
   if (honorMock) {
     return honorMock

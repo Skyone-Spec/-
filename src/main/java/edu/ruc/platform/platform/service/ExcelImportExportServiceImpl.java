@@ -5,8 +5,12 @@ import edu.ruc.platform.auth.repository.UserAccountRepository;
 import edu.ruc.platform.common.enums.RoleType;
 import edu.ruc.platform.common.exception.BusinessException;
 import edu.ruc.platform.platform.dto.BatchImportResultResponse;
+import edu.ruc.platform.student.domain.StudentAwardSupportRecord;
 import edu.ruc.platform.student.domain.StudentProfile;
+import edu.ruc.platform.student.dto.StudentProfileResponse;
+import edu.ruc.platform.student.repository.StudentAwardSupportRecordRepository;
 import edu.ruc.platform.student.repository.StudentProfileRepository;
+import edu.ruc.platform.student.service.StudentProfileApplicationService;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -17,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +33,8 @@ public class ExcelImportExportServiceImpl implements ExcelImportExportService {
 
     private final UserAccountRepository userAccountRepository;
     private final StudentProfileRepository studentProfileRepository;
+    private final StudentAwardSupportRecordRepository studentAwardSupportRecordRepository;
+    private final StudentProfileApplicationService studentProfileService;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -178,6 +185,76 @@ public class ExcelImportExportServiceImpl implements ExcelImportExportService {
     }
 
     @Override
+    public BatchImportResultResponse importAwardSupportRecords(MultipartFile file) {
+        List<BatchImportResultResponse.ImportErrorItem> errors = new ArrayList<>();
+        int totalRows = 0;
+        int successRows = 0;
+
+        try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
+            if (sheet == null) throw new BusinessException("Excel文件为空");
+
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null || isRowBlank(row, 8)) continue;
+
+                totalRows++;
+                try {
+                    String studentNo = getCellStringValue(row, 0);
+                    String assessmentAcademicYear = getCellStringValue(row, 1);
+                    String awardName = getCellStringValue(row, 2);
+                    String batchName = getCellStringValue(row, 3);
+                    String awardLevel = getCellStringValue(row, 4);
+                    String awardGrade = getCellStringValue(row, 5);
+                    String awardAmountText = getCellStringValue(row, 6);
+                    String awardType = getCellStringValue(row, 7);
+
+                    if (studentNo == null || studentNo.isBlank()) {
+                        errors.add(new BatchImportResultResponse.ImportErrorItem(i + 1, "studentNo", "学号不能为空", ""));
+                        continue;
+                    }
+                    if (assessmentAcademicYear == null || assessmentAcademicYear.isBlank()) {
+                        errors.add(new BatchImportResultResponse.ImportErrorItem(i + 1, "assessmentAcademicYear", "评定学年不能为空", studentNo));
+                        continue;
+                    }
+                    if (awardName == null || awardName.isBlank()) {
+                        errors.add(new BatchImportResultResponse.ImportErrorItem(i + 1, "awardName", "奖学金名称不能为空", studentNo));
+                        continue;
+                    }
+
+                    StudentProfileResponse student = studentProfileService.getStudentByStudentNo(studentNo);
+                    StudentAwardSupportRecord entity = findExistingAwardSupportRecord(
+                            student.id(),
+                            assessmentAcademicYear,
+                            awardName,
+                            batchName,
+                            awardType
+                    );
+                    if (entity == null) {
+                        entity = new StudentAwardSupportRecord();
+                        entity.setStudentId(student.id());
+                    }
+                    entity.setAssessmentAcademicYear(assessmentAcademicYear);
+                    entity.setAwardName(awardName);
+                    entity.setBatchName(blankToNull(batchName));
+                    entity.setAwardLevel(blankToNull(awardLevel));
+                    entity.setAwardGrade(blankToNull(awardGrade));
+                    entity.setAwardAmount(parseBigDecimal(awardAmountText, "奖学金额（元）"));
+                    entity.setAwardType(blankToNull(awardType));
+                    studentAwardSupportRecordRepository.save(entity);
+                    successRows++;
+                } catch (Exception e) {
+                    errors.add(new BatchImportResultResponse.ImportErrorItem(i + 1, "general", e.getMessage(), ""));
+                }
+            }
+        } catch (IOException e) {
+            throw new BusinessException("读取Excel文件失败: " + e.getMessage());
+        }
+
+        return new BatchImportResultResponse(totalRows, successRows, totalRows - successRows, errors);
+    }
+
+    @Override
     public byte[] exportStudents(String grade, String className, String status) {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("学生列表");
@@ -221,5 +298,55 @@ public class ExcelImportExportServiceImpl implements ExcelImportExportService {
         if (cell == null) return null;
         cell.setCellType(CellType.STRING);
         return cell.getStringCellValue().trim();
+    }
+
+    private StudentAwardSupportRecord findExistingAwardSupportRecord(Long studentId,
+                                                                     String assessmentAcademicYear,
+                                                                     String awardName,
+                                                                     String batchName,
+                                                                     String awardType) {
+        return studentAwardSupportRecordRepository.findByStudentIdOrderByUpdatedAtDescIdDesc(studentId).stream()
+                .filter(item -> equalsText(item.getAssessmentAcademicYear(), assessmentAcademicYear))
+                .filter(item -> equalsText(item.getAwardName(), awardName))
+                .filter(item -> equalsText(item.getBatchName(), batchName))
+                .filter(item -> equalsText(item.getAwardType(), awardType))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private BigDecimal parseBigDecimal(String value, String label) {
+        String normalized = blankToNull(value);
+        if (normalized == null) {
+            return null;
+        }
+        try {
+            return new BigDecimal(normalized);
+        } catch (Exception ex) {
+            throw new BusinessException(label + "格式不正确");
+        }
+    }
+
+    private String blankToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isBlank() ? null : trimmed;
+    }
+
+    private boolean equalsText(String left, String right) {
+        String normalizedLeft = left == null ? "" : left.trim();
+        String normalizedRight = right == null ? "" : right.trim();
+        return normalizedLeft.equals(normalizedRight);
+    }
+
+    private boolean isRowBlank(Row row, int cellCount) {
+        for (int i = 0; i < cellCount; i++) {
+            String value = getCellStringValue(row, i);
+            if (value != null && !value.isBlank()) {
+                return false;
+            }
+        }
+        return true;
     }
 }

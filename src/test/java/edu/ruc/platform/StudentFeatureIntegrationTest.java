@@ -9,8 +9,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -249,6 +251,109 @@ class StudentFeatureIntegrationTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void studentGrowthArchiveReturnsProfileAndConfiguredModules() throws Exception {
+        String token = loginAndExtractToken();
+
+        mockMvc.perform(get("/api/v1/student/growth/archive")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.profile.studentNo").value("2023100001"))
+                .andExpect(jsonPath("$.data.profile.collegeName").value("信息学院"))
+                .andExpect(jsonPath("$.data.modules").isArray())
+                .andExpect(jsonPath("$.data.modules[?(@.moduleCode=='award-support')]").isNotEmpty())
+                .andExpect(jsonPath("$.data.modules[?(@.moduleCode=='competition' && @.editMode=='SELF')]").isNotEmpty());
+
+        mockMvc.perform(get("/api/v1/student/growth/modules")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[?(@.moduleCode=='award-support' && @.editMode=='DISABLED')]").isNotEmpty())
+                .andExpect(jsonPath("$.data[?(@.moduleCode=='skill-certificate' && @.editMode=='SELF')]").isNotEmpty());
+    }
+
+    @Test
+    void studentCanManageEditableGrowthRecordsButCannotModifyAwardSupport() throws Exception {
+        String token = loginAndExtractToken();
+
+        String createResponse = mockMvc.perform(post("/api/v1/student/growth/competition/records")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "fields": {
+                                    "awardDate": "2026-05-20",
+                                    "competitionName": "全国大学生软件测试大赛",
+                                    "competitionLevel": "国家级",
+                                    "competitionGrade": "一等奖",
+                                    "competitionCategory": "学科竞赛",
+                                    "organizer": "教育部",
+                                    "advisorTeacherInfo": "赵老师",
+                                    "remarks": "新增联调用例"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.moduleCode").value("competition"))
+                .andExpect(jsonPath("$.data.rawFields.competitionName").value("全国大学生软件测试大赛"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long recordId = objectMapper.readTree(createResponse).path("data").path("id").asLong();
+
+        mockMvc.perform(put("/api/v1/student/growth/competition/records/{id}", recordId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "fields": {
+                                    "awardDate": "2026-05-20",
+                                    "competitionName": "全国大学生软件测试大赛",
+                                    "competitionLevel": "国家级",
+                                    "competitionGrade": "特等奖",
+                                    "competitionCategory": "学科竞赛",
+                                    "organizer": "教育部",
+                                    "advisorTeacherInfo": "赵老师",
+                                    "remarks": "已完成修改"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.rawFields.competitionGrade").value("特等奖"))
+                .andExpect(jsonPath("$.data.rawFields.remarks").value("已完成修改"));
+
+        mockMvc.perform(get("/api/v1/student/growth/competition/records/{id}", recordId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(recordId))
+                .andExpect(jsonPath("$.data.rawFields.competitionGrade").value("特等奖"));
+
+        mockMvc.perform(delete("/api/v1/student/growth/competition/records/{id}", recordId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(post("/api/v1/student/growth/award-support/records")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "fields": {
+                                    "assessmentAcademicYear": "2025-2026",
+                                    "awardName": "国家奖学金",
+                                    "awardType": "奖学金"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("禁止修改")));
     }
 
     private String loginAndExtractToken() throws Exception {

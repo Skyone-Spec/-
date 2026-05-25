@@ -1,0 +1,88 @@
+<view class="page">
+  <view class="hero-card">
+    <view class="hero-main">
+      <view class="avatar">{{avatarText}}</view>
+      <view class="hero-text">
+        <text class="hero-title">{{profileCard.name || userInfo.name || '同学'}}</text>
+        <text class="hero-subtitle">学号：{{profileCard.studentNo || userInfo.studentId || '--'}}</text>
+        <view class="hero-tags" wx:if="{{identityTags.length}}">
+          <text wx:for="{{identityTags}}" wx:key="*this" class="hero-tag">{{item}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-card">
+    <view class="section-head">
+      <text class="section-title">基础档案</text>
+    </view>
+    <view class="profile-grid">
+      <view wx:for="{{profileItems}}" wx:key="label" class="profile-item">
+        <text class="profile-label">{{item.label}}</text>
+        <text class="profile-value">{{item.value}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-card">
+    <view class="section-head">
+      <text class="section-title">成长信息导航</text>
+    </view>
+    <view class="module-grid">
+      <view
+        wx:for="{{modules}}"
+        wx:key="moduleCode"
+        class="module-card"
+        data-module-code="{{item.moduleCode}}"
+        bindtap="goToModule"
+      >
+        <view class="module-top">
+          <view class="module-icon">{{item.iconText}}</view>
+          <text class="mode-tag mode-{{item.editable ? 'self' : 'disabled'}}">{{item.editModeLabel}}</text>
+        </view>
+        <text class="module-title">{{item.moduleName}}</text>
+        <text class="module-count">已登记 {{item.recordCount}} 条</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-card">
+    <view class="section-head">
+      <text class="section-title">成长信息概览</text>
+    </view>
+
+    <view wx:for="{{modules}}" wx:key="moduleCode" class="overview-card">
+      <view class="overview-head">
+        <view class="overview-text">
+          <text class="overview-title">{{item.moduleName}}</text>
+          <text class="overview-desc">{{item.description}}</text>
+        </view>
+        <text class="mode-tag mode-{{item.editable ? 'self' : 'disabled'}}">{{item.editModeLabel}}</text>
+      </view>
+
+      <view class="overview-meta">
+        <text class="overview-count">共 {{item.recordCount}} 条记录</text>
+        <view class="award-summary" wx:if="{{item.awardTypeSummary.length}}">
+          <text wx:for="{{item.awardTypeSummary}}" wx:key="*this" class="award-pill">{{item}}</text>
+        </view>
+      </view>
+
+      <view wx:if="{{item.previewRecords.length}}">
+        <view wx:for="{{item.previewRecords}}" wx:key="id" class="record-card">
+          <text class="record-title">{{item.summary}}</text>
+          <text class="record-time">最近更新：{{item.updatedAt}}</text>
+          <view wx:for="{{item.fields}}" wx:key="key" class="field-row">
+            <text class="field-label">{{item.label}}</text>
+            <text class="field-value">{{item.value}}</text>
+          </view>
+        </view>
+      </view>
+      <view wx:else class="empty-block">{{item.emptyText}}</view>
+
+      <view class="action-row">
+        <button size="mini" plain="true" class="action-btn" data-module-code="{{item.moduleCode}}" bindtap="goToModule">查看全部</button>
+        <button wx:if="{{item.editable}}" size="mini" class="action-btn action-primary" data-module-code="{{item.moduleCode}}" bindtap="goToAdd">新增记录</button>
+      </view>
+    </view>
+  </view>
+</view>

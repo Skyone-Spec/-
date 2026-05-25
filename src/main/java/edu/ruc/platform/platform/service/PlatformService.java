@@ -61,6 +61,7 @@ import edu.ruc.platform.platform.dto.PlatformSecurityPolicyResponse;
 import edu.ruc.platform.platform.dto.PlatformSecurityPolicyUpdateRequest;
 import edu.ruc.platform.platform.dto.PlatformSessionResponse;
 import edu.ruc.platform.platform.dto.PlatformStudentDataScopeResponse;
+import edu.ruc.platform.platform.dto.PlatformStudentDetailResponse;
 import edu.ruc.platform.platform.dto.PlatformStudentScopeCheckResponse;
 import edu.ruc.platform.platform.dto.PlatformStudentQueryResponse;
 import edu.ruc.platform.platform.dto.PlatformStudentUiContractResponse;
@@ -81,6 +82,7 @@ import edu.ruc.platform.student.dto.StudentProfileFilterRequest;
 import edu.ruc.platform.student.dto.StudentProfileResponse;
 import edu.ruc.platform.student.domain.StudentProfile;
 import edu.ruc.platform.student.repository.StudentProfileRepository;
+import edu.ruc.platform.student.service.StudentGrowthApplicationService;
 import edu.ruc.platform.student.service.StudentProfileApplicationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.env.Environment;
@@ -105,6 +107,7 @@ public class PlatformService implements PlatformApplicationService {
     private final UserAccountRepository userAccountRepository;
     private final StudentProfileRepository studentProfileRepository;
     private final StudentProfileApplicationService studentProfileService;
+    private final StudentGrowthApplicationService studentGrowthService;
     private final AdminApplicationService adminService;
     private final CertificateApplicationService certificateService;
     private final PasswordEncoder passwordEncoder;
@@ -435,8 +438,9 @@ public class PlatformService implements PlatformApplicationService {
     }
 
     @Override
-    public PlatformStudentQueryResponse getStudent(Long studentId) {
-        return toPlatformStudent(studentProfileService.getStudent(studentId));
+    public PlatformStudentDetailResponse getStudent(Long studentId) {
+        StudentProfileResponse profile = studentProfileService.getStudent(studentId);
+        return toPlatformStudentDetail(profile, studentGrowthService.archiveByStudentId(studentId).modules());
     }
 
     @Override
@@ -802,6 +806,35 @@ public class PlatformService implements PlatformApplicationService {
                         item.maskedHouseholdAddress(),
                         item.maskedSupervisor()
                 )
+        );
+    }
+
+    private PlatformStudentDetailResponse toPlatformStudentDetail(
+            StudentProfileResponse item,
+            List<edu.ruc.platform.student.dto.StudentGrowthDtos.StudentGrowthModuleArchiveSectionResponse> growthModules
+    ) {
+        return new PlatformStudentDetailResponse(
+                item.id(),
+                item.studentNo(),
+                item.name(),
+                item.collegeName(),
+                item.major(),
+                item.grade(),
+                item.className(),
+                item.advisorScope(),
+                item.degreeLevel(),
+                item.status(),
+                item.graduated(),
+                item.majorChangedTo(),
+                item.email(),
+                new PlatformStudentDetailResponse.SensitiveFields(
+                        item.maskedIdCardNo(),
+                        item.maskedPhone(),
+                        item.maskedNativePlace(),
+                        item.maskedHouseholdAddress(),
+                        item.maskedSupervisor()
+                ),
+                growthModules
         );
     }
 

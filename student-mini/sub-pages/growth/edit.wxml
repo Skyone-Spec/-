@@ -1,0 +1,31 @@
+<view class="page">
+  <view class="hero-card">
+    <text class="hero-title">{{recordId ? '编辑' : '新增'}}{{moduleTitle}}</text>
+    <text class="hero-desc">{{moduleDescription}}</text>
+    <text class="mode-tag mode-{{editable ? 'self' : 'disabled'}}">{{editModeLabel}}</text>
+  </view>
+
+  <view class="notice-card">
+    <text class="notice-title">{{editable ? '填写说明' : '权限说明'}}</text>
+    <text class="notice-desc">{{editable ? '请根据实际情况填写内容，保存后立即生效，无需审核。' : '当前模块属于禁改数据，如需修改请联系相关部门咨询。'}}</text>
+  </view>
+
+  <view class="form-card">
+    <view wx:for="{{fields}}" wx:key="key" class="form-item">
+      <view class="form-label-row">
+        <text class="form-label">{{item.label}}</text>
+        <text wx:if="{{item.required}}" class="form-required">*</text>
+      </view>
+      <view wx:if="{{!editable}}" class="readonly-value {{item.value ? '' : 'placeholder'}}">{{item.value || '暂无内容'}}</view>
+      <picker wx:elif="{{item.type === 'date'}}" mode="date" value="{{item.value}}" data-index="{{index}}" bindchange="onDateChange">
+        <view class="picker-value {{item.value ? '' : 'placeholder'}}">{{item.value || '请选择日期'}}</view>
+      </picker>
+      <textarea wx:elif="{{item.type === 'textarea'}}" value="{{item.value}}" placeholder="{{item.placeholder}}" data-index="{{index}}" bindinput="onInput" maxlength="500" />
+      <input wx:else type="{{item.type === 'digit' ? 'digit' : 'text'}}" value="{{item.value}}" placeholder="{{item.placeholder}}" data-index="{{index}}" bindinput="onInput" />
+    </view>
+  </view>
+
+  <view class="footer" wx:if="{{editable}}">
+    <button class="submit-btn" loading="{{submitting}}" bindtap="handleSubmit">保存</button>
+  </view>
+</view>

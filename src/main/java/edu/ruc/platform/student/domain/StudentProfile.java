@@ -19,6 +19,9 @@ public class StudentProfile extends BaseEntity {
     @Column(nullable = false, length = 64)
     private String name;
 
+    @Column(length = 128)
+    private String collegeName;
+
     @Column(length = 64)
     private String major;
 

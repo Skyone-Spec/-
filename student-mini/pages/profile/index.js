@@ -22,6 +22,11 @@ Page({
   goToMyApply() {
     wx.navigateTo({ url: '/sub-pages/apply/list' })
   },
+
+  // 跳转我的档案
+  goToArchive() {
+    wx.navigateTo({ url: '/sub-pages/growth/archive' })
+  },
   
   // 跳转我的工单
   goToMyTickets() {

@@ -77,6 +77,13 @@ public class StudentProfileService implements StudentProfileApplicationService {
     }
 
     @Override
+    public StudentProfileResponse getStudentByStudentNo(String studentNo) {
+        return studentProfileRepository.findByStudentNo(studentNo)
+                .map(item -> toResponse(item, currentUserService.requireCurrentUser()))
+                .orElseThrow(() -> new BusinessException("学生不存在: " + studentNo));
+    }
+
+    @Override
     public StudentProfileResponse currentStudentProfile() {
         AuthenticatedUser user = currentUserService.requireCurrentUser();
         if (user.studentId() == null) {
@@ -263,6 +270,7 @@ public class StudentProfileService implements StudentProfileApplicationService {
     private void populateEntity(StudentProfile entity, StudentProfileUpsertRequest request) {
         entity.setStudentNo(request.studentNo());
         entity.setName(request.name());
+        entity.setCollegeName(request.collegeName());
         entity.setMajor(request.major());
         entity.setGrade(request.grade());
         entity.setClassName(request.className());
@@ -342,6 +350,7 @@ public class StudentProfileService implements StudentProfileApplicationService {
                 entity.getId(),
                 entity.getStudentNo(),
                 entity.getName(),
+                entity.getCollegeName(),
                 entity.getMajor(),
                 entity.getGrade(),
                 entity.getClassName(),
@@ -428,6 +437,7 @@ public class StudentProfileService implements StudentProfileApplicationService {
                     item.id(),
                     item.studentNo(),
                     item.name(),
+                    item.collegeName(),
                     item.major(),
                     item.grade(),
                     item.className(),
@@ -449,6 +459,7 @@ public class StudentProfileService implements StudentProfileApplicationService {
                     item.id(),
                     item.studentNo(),
                     item.name(),
+                    item.collegeName(),
                     item.major(),
                     item.grade(),
                     item.className(),
@@ -472,6 +483,7 @@ public class StudentProfileService implements StudentProfileApplicationService {
                 item.id(),
                 item.studentNo(),
                 item.name(),
+                item.collegeName(),
                 item.major(),
                 item.grade(),
                 item.className(),
