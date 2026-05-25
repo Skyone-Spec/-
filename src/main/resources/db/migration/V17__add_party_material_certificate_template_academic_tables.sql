@@ -123,3 +123,74 @@ ALTER TABLE student_portrait ADD COLUMN IF NOT EXISTS leadership_roles VARCHAR(5
 -- 添加字段到 notice_delivery_target 表 (Kingbase环境)
 -- ALTER TABLE notice_delivery_target ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT FALSE;
 -- ALTER TABLE notice_delivery_target ADD COLUMN IF NOT EXISTS read_at TIMESTAMP;
+
+-- 党团流程模板表
+CREATE TABLE IF NOT EXISTS party_flow_template (
+    id BIGSERIAL PRIMARY KEY,
+    flow_code VARCHAR(100) NOT NULL UNIQUE,
+    flow_name VARCHAR(200) NOT NULL,
+    flow_type VARCHAR(50) NOT NULL,
+    total_stages INTEGER NOT NULL,
+    description TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 党团流程阶段表
+CREATE TABLE IF NOT EXISTS party_flow_stage (
+    id BIGSERIAL PRIMARY KEY,
+    flow_id BIGINT NOT NULL,
+    seq_no INTEGER NOT NULL,
+    stage_code VARCHAR(100) NOT NULL,
+    stage_name VARCHAR(200) NOT NULL,
+    description TEXT,
+    required_materials TEXT,
+    estimated_days INTEGER,
+    reminder_days_before INTEGER,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 党团题库表
+CREATE TABLE IF NOT EXISTS party_question_bank (
+    id BIGSERIAL PRIMARY KEY,
+    bank_code VARCHAR(100) NOT NULL UNIQUE,
+    bank_name VARCHAR(200) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    question_count INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    description VARCHAR(500),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 党团题目表
+CREATE TABLE IF NOT EXISTS party_question (
+    id BIGSERIAL PRIMARY KEY,
+    bank_id BIGINT NOT NULL,
+    seq_no INTEGER NOT NULL,
+    question_text TEXT NOT NULL,
+    options TEXT NOT NULL,
+    correct_answer VARCHAR(10) NOT NULL,
+    explanation TEXT,
+    score INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 党团自测记录表
+CREATE TABLE IF NOT EXISTS party_quiz_record (
+    id BIGSERIAL PRIMARY KEY,
+    student_id BIGINT NOT NULL,
+    bank_id BIGINT NOT NULL,
+    total_questions INTEGER NOT NULL,
+    correct_count INTEGER NOT NULL,
+    score INTEGER NOT NULL,
+    total_score INTEGER NOT NULL,
+    passed BOOLEAN NOT NULL,
+    completed_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
